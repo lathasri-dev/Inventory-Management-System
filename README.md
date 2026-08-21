@@ -1,214 +1,545 @@
 # Inventory Management System
 
-A full-stack web application for managing product inventory built with React, Node.js, Express, and MongoDB.
+A full-stack **Inventory Management System** built with the **MERN stack** to help businesses efficiently manage products, categories, suppliers, customers, stock levels, and inventory operations through a centralized web application.
 
-## 🏗️ Architecture
+The system provides an admin-focused dashboard with complete CRUD functionality, search, filtering, pagination, stock tracking, and database integration using MongoDB.
 
-- **Frontend**: React 18 + Vite + Material-UI
-- **Backend**: Node.js + Express + MongoDB + Mongoose (Port 5001)
-- **Database**: MongoDB
-- **Styling**: Material-UI (MUI) components
+## 🚀 Live Demo
+
+**Frontend:**
+https://inventory-management-system-theta-mauve.vercel.app/
+
+**GitHub Repository:**
+https://github.com/lathasri-dev/Inventory-Management-System
+
+> Backend API is deployed separately using Render and connected to MongoDB Atlas.
+
+---
+
+## 📌 Project Overview
+
+Managing inventory manually can lead to stock inaccuracies, duplicate records, inefficient tracking, and difficulty monitoring product availability.
+
+This project provides a centralized web-based solution for managing inventory data and automating common inventory operations.
+
+The application allows administrators to:
+
+* Manage products
+* Manage categories
+* Manage suppliers
+* Manage customers
+* Track stock quantities
+* Search and filter records
+* Add, edit, view, and delete records
+* Monitor inventory information through a dashboard
+* Store and retrieve data from MongoDB
+* Access the system through a responsive web interface
+
+---
+
+## ✨ Key Features
+
+### 📦 Product Management
+
+* Add new products
+* Edit existing products
+* View product details
+* Delete products
+* Search products
+* Filter products
+* Paginate product records
+* Manage SKU and pricing information
+* Track stock quantities
+* Associate products with categories and suppliers
+
+### 🗂️ Category Management
+
+* Create categories
+* Edit categories
+* View categories
+* Delete categories
+* Search and filter categories
+* Maintain organized product classification
+
+### 🚚 Supplier Management
+
+* Add suppliers
+* Edit supplier information
+* View supplier details
+* Delete suppliers
+* Search and filter suppliers
+* Maintain supplier-product relationships
+
+### 👥 Customer Management
+
+* Add customers
+* Edit customer information
+* View customer details
+* Delete customers
+* Search customers
+* Maintain customer records
+
+### 📊 Dashboard
+
+The admin dashboard provides a centralized overview of inventory information, including:
+
+* Total products
+* Categories
+* Suppliers
+* Customers
+* Stock information
+* Inventory statistics
+
+### 🔍 Search, Filter & Pagination
+
+The system supports:
+
+* Keyword-based search
+* Category filtering
+* Supplier filtering
+* Stock-related filtering
+* Paginated data tables
+
+These features make it easier to manage large inventory datasets efficiently.
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+
+* React.js
+* Vite
+* JavaScript
+* HTML5
+* CSS3
+* Material UI
+* Axios
+* React Router
+
+### Backend
+
+* Node.js
+* Express.js
+* REST APIs
+* JavaScript
+
+### Database
+
+* MongoDB
+* MongoDB Atlas
+* Mongoose
+
+### Development Tools
+
+* Git
+* GitHub
+* VS Code
+* npm
+* Postman
+
+### Deployment
+
+* **Vercel** — Frontend
+* **Render** — Backend
+* **MongoDB Atlas** — Database
+
+---
+
+## 🏗️ System Architecture
+
+```text
+                    ┌─────────────────────────┐
+                    │        User/Admin       │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │       React + Vite      │
+                    │        Frontend         │
+                    │        Vercel           │
+                    └────────────┬────────────┘
+                                 │
+                           REST API / HTTP
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │    Node.js + Express    │
+                    │        Backend          │
+                    │         Render          │
+                    └────────────┬────────────┘
+                                 │
+                              Mongoose
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      MongoDB Atlas      │
+                    │        Database         │
+                    └─────────────────────────┘
+```
+
+---
 
 ## 📁 Project Structure
 
-```
-Project/
-├── backend/                 # Node.js/Express backend
+```text
+Inventory-Management-System/
+│
+├── backend/
 │   ├── config/
-│   │   └── db.js           # Database configuration
 │   ├── controllers/
-│   │   └── productController.js  # Product business logic
+│   ├── middleware/
 │   ├── models/
-│   │   └── Product.js      # Product data model
 │   ├── routes/
-│   │   └── products.js     # Product API routes
-│   ├── .env               # Backend environment variables
-│   ├── package.json       # Backend dependencies
-│   └── server.js          # Express server entry point
-├── frontend/               # React frontend
+│   ├── services/
+│   ├── utils/
+│   ├── server.js
+│   ├── package.json
+│   └── .env
+│
+├── frontend/
+│   ├── public/
 │   ├── src/
-│   │   ├── api/
-│   │   │   └── api.js      # API communication layer
 │   │   ├── components/
-│   │   │   ├── NavBar.jsx  # Navigation component
-│   │   │   └── ProductTable.jsx  # Product table component
 │   │   ├── pages/
-│   │   │   ├── ProductList.jsx    # Product listing page
-│   │   │   ├── ProductForm.jsx    # Add/Edit product form
-│   │   │   └── NotFound.jsx       # 404 page
-│   │   ├── App.jsx         # Main app component
-│   │   ├── main.jsx        # React entry point
-│   │   └── styles.css      # Global styles
-│   ├── .env               # Frontend environment variables
-│   ├── index.html         # HTML template
-│   ├── package.json       # Frontend dependencies
-│   └── vite.config.js     # Vite configuration
-├── package.json           # Root package.json with unified scripts
-└── README.md             # This file
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   ├── utils/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── .npmrc
+│   ├── package.json
+│   └── vite.config.js
+│
+├── README.md
+├── package.json
+├── package-lock.json
+└── .gitignore
 ```
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
+## 🔄 Application Workflow
 
-- Node.js (v16 or higher)
-- npm (v8 or higher)
-- MongoDB (running locally or MongoDB Atlas)
+```text
+Admin Login
+     │
+     ▼
+Dashboard
+     │
+     ├── Products
+     │     ├── Add
+     │     ├── View
+     │     ├── Edit
+     │     ├── Delete
+     │     ├── Search
+     │     └── Filter
+     │
+     ├── Categories
+     │
+     ├── Suppliers
+     │
+     └── Customers
+             │
+             ▼
+       REST API Requests
+             │
+             ▼
+          MongoDB
+```
 
-### Installation
+---
 
-1. **Clone and navigate to the project:**
-   ```bash
-   cd Project
-   ```
+## 🔌 REST API Structure
 
-2. **Install all dependencies:**
-   ```bash
-   npm run install-all
-   ```
+The backend follows a RESTful API architecture.
 
-3. **Set up environment variables:**
-   
-   Backend (`.env` in `backend/` folder):
-   ```env
-   PORT=5000
-   MONGO_URI=mongodb://localhost:27017/inventory_db
-   NODE_ENV=development
-   ```
-   
-   Frontend (`.env` in `frontend/` folder):
-   ```env
-   VITE_API_BASE=http://localhost:5000
-   ```
+### Products
 
-4. **Start MongoDB** (if running locally):
-   ```bash
-   mongod
-   ```
+```text
+GET     /api/products
+GET     /api/products/:id
+POST    /api/products
+PUT     /api/products/:id
+DELETE  /api/products/:id
+```
 
-5. **Run the application:**
-   ```bash
-   npm run dev
-   ```
+### Categories
 
-   This will start both backend (port 5000) and frontend (port 5173) concurrently.
+```text
+GET     /api/categories
+GET     /api/categories/:id
+POST    /api/categories
+PUT     /api/categories/:id
+DELETE  /api/categories/:id
+```
 
-### Alternative Commands
+### Suppliers
 
-- **Backend only:** `npm run server`
-- **Frontend only:** `npm run client`
-- **Production build:** `npm run build`
-- **Production start:** `npm run start:prod`
+```text
+GET     /api/suppliers
+GET     /api/suppliers/:id
+POST    /api/suppliers
+PUT     /api/suppliers/:id
+DELETE  /api/suppliers/:id
+```
 
-## 🔧 API Endpoints
+### Customers
 
-### Products API (`/api/products`)
+```text
+GET     /api/customers
+GET     /api/customers/:id
+POST    /api/customers
+PUT     /api/customers/:id
+DELETE  /api/customers/:id
+```
 
-- `GET /` - Get all products
-- `GET /:id` - Get product by ID
-- `POST /` - Create new product
-- `PUT /:id` - Update product
-- `DELETE /:id` - Delete product
+> API endpoint names may vary depending on the final backend implementation.
 
-### Product Schema
+---
 
-```javascript
+## ⚙️ Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/lathasri-dev/Inventory-Management-System.git
+```
+
+Navigate into the project:
+
+```bash
+cd Inventory-Management-System
+```
+
+---
+
+### 2. Install Backend Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+---
+
+### 3. Configure Environment Variables
+
+Create a `.env` file inside the `backend` directory.
+
+Example:
+
+```env
+PORT=5001
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+```
+
+> Never commit `.env` files or database credentials to GitHub.
+
+---
+
+### 4. Start the Backend
+
+```bash
+npm start
+```
+
+The backend will run locally on:
+
+```text
+http://localhost:5001
+```
+
+---
+
+### 5. Install Frontend Dependencies
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install --legacy-peer-deps
+```
+
+---
+
+### 6. Start the Frontend
+
+```bash
+npm run dev
+```
+
+The frontend will run on a URL similar to:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## 🌐 Environment Configuration
+
+For production deployment, the frontend should communicate with the deployed backend instead of `localhost`.
+
+Example:
+
+```env
+VITE_API_BASE=https://your-backend.onrender.com
+```
+
+The production architecture is:
+
+```text
+React/Vercel
+      ↓
+Render API
+      ↓
+MongoDB Atlas
+```
+
+---
+
+## 🗄️ Database Design
+
+The application uses MongoDB with Mongoose models for structured data management.
+
+Main collections include:
+
+```text
+Products
+Categories
+Suppliers
+Customers
+```
+
+### Product Example
+
+```json
 {
-  name: String (required),
-  item_number: String (required, unique),
-  price: Number (required, min: 0),
-  quantity: Number (required, min: 0),
-  createdAt: Date (auto-generated)
+  "name": "Wireless Keyboard",
+  "sku": "KB-001",
+  "category": "Electronics",
+  "supplier": "ABC Technologies",
+  "purchasePrice": 850,
+  "sellingPrice": 1200,
+  "quantity": 50
 }
 ```
 
-## 🎨 Frontend Features
+---
 
-- **Product List**: View all products in a responsive table
-- **Add Product**: Create new products with validation
-- **Edit Product**: Update existing product information
-- **Delete Product**: Remove products with confirmation
-- **Navigation**: Clean routing between pages
-- **Responsive Design**: Material-UI components for modern UI
+## 🔐 Security Considerations
 
-## 🛠️ Development
+The application follows basic security practices including:
 
-### Backend Development
-```bash
-cd backend
-npm run dev  # Uses nodemon for auto-restart
-```
+* Environment variables for sensitive configuration
+* Password/credential protection
+* Backend validation
+* API-level validation
+* CORS configuration
+* MongoDB authentication
+* Separation of frontend and backend services
 
-### Frontend Development
-```bash
-cd frontend
-npm run dev  # Vite dev server with hot reload
-```
+Sensitive information such as database credentials and API secrets should never be committed to the repository.
 
-### Building for Production
-```bash
-cd frontend
-npm run build  # Creates optimized build in dist/
-```
+---
 
-## 📦 Key Dependencies
+## 🧪 Testing
 
-### Backend
-- `express` - Web framework
-- `mongoose` - MongoDB ODM
-- `cors` - Cross-origin resource sharing
-- `dotenv` - Environment variable loading
-- `nodemon` - Development auto-restart
+The project includes integration testing support for validating communication between the frontend, backend, and database layers.
+
+Backend APIs can also be tested using tools such as:
+
+* Postman
+* Thunder Client
+* Browser REST clients
+
+---
+
+## 🚀 Deployment
 
 ### Frontend
-- `react` - UI library
-- `react-dom` - React DOM rendering
-- `react-router-dom` - Client-side routing
-- `@mui/material` - Material-UI components
-- `@mui/icons-material` - Material-UI icons
-- `axios` - HTTP client
-- `vite` - Build tool and dev server
 
-## 🔍 Troubleshooting
+The React frontend is deployed using:
 
-### Common Issues
+**Vercel**
 
-1. **MongoDB Connection Error:**
-   - Ensure MongoDB is running
-   - Check MONGO_URI in backend/.env
-   - Verify MongoDB port (default: 27017)
+```text
+GitHub → Vercel → React Application
+```
 
-2. **Port Already in Use:**
-   - Backend default port: 5000
-   - Frontend default port: 5173
-   - Change ports in respective .env files if needed
+### Backend
 
-3. **CORS Issues:**
-   - Backend has CORS enabled for all origins in development
-   - Check VITE_API_BASE in frontend/.env
+The Node.js/Express backend is deployed using:
 
-4. **Build Errors:**
-   - Ensure all dependencies are installed: `npm run install-all`
-   - Clear node_modules and reinstall if needed
+**Render**
 
-## 📝 Environment Variables
+```text
+GitHub → Render → Express API
+```
 
-### Backend (.env)
-- `PORT` - Server port (default: 5000)
-- `MONGO_URI` - MongoDB connection string
-- `NODE_ENV` - Environment (development/production)
+### Database
 
-### Frontend (.env)
-- `VITE_API_BASE` - Backend API base URL
+The production database is hosted using:
 
-## 🤝 Contributing
+**MongoDB Atlas**
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+```text
+Render Backend → MongoDB Atlas
+```
 
-## 📄 License
+---
 
-This project is licensed under the MIT License.
+## 📈 Future Enhancements
+
+Planned improvements include:
+
+* Role-based access control
+* Inventory stock alerts
+* Low-stock notifications
+* Sales and purchase management
+* Inventory transaction history
+* Advanced analytics
+* Export reports to Excel/PDF
+* Barcode and QR-code scanning
+* Supplier purchase-order management
+* Email notifications
+* Audit logs
+* Advanced dashboard visualizations
+* Cloud-based automated backups
+
+---
+
+## 🎯 Learning Outcomes
+
+This project provided practical experience in:
+
+* Full-stack web development
+* MERN stack development
+* REST API development
+* MongoDB database design
+* Mongoose ODM
+* CRUD operations
+* Authentication and authorization concepts
+* API integration
+* Frontend state management
+* Form validation
+* Search and filtering
+* Pagination
+* Git and GitHub
+* Cloud deployment
+* Debugging production issues
+
+---
+
+## 👩‍💻 Developer
+
+**Lathasri Kondaveeti**
+
+Computer Science & Engineering Student
+
+GitHub:
+https://github.com/lathasri-dev
+
+---
