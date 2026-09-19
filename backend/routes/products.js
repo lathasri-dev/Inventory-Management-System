@@ -21,7 +21,7 @@ router.get('/category/:categoryId', productController.getProductsByCategory);
 // Bulk delete — POST before DELETE /:id
 router.post(
   '/bulk-delete',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   productController.bulkDeleteProducts
 );
 
@@ -30,7 +30,7 @@ router.get('/', productController.getProducts);
 
 router.post(
   '/',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   productController.createProduct
 );
 
@@ -39,20 +39,20 @@ router.get('/:id', productController.getProductById);
 
 router.put(
   '/:id',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   productController.updateProduct
 );
 
 // Adjust stock quantity only (also available to sales staff)
 router.patch(
   '/:id/quantity',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER, ROLE_IDS.SALES_STAFF]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER, ROLE_IDS.USER]),
   productController.updateQuantityOnly
 );
 
 router.delete(
   '/:id',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   productController.deleteProduct
 );
 

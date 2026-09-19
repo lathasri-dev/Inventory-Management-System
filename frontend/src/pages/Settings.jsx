@@ -41,6 +41,13 @@ export default function Settings() {
 
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '' });
 
+  const [securitySetup, setSecuritySetup] = useState({
+    currentPassword: '',
+    securityQuestion: 'What was the name of your first school?',
+    securityAnswer: '',
+  });
+  const [recoveryCode, setRecoveryCode] = useState(null);
+
   // Load backend and profile settings
   const loadSettingsAndProfile = async () => {
     try {
@@ -107,6 +114,23 @@ export default function Settings() {
       }
     } catch (error) {
       toast.error(error.message || 'Failed to change password');
+    }
+  };
+
+  const handleSecuritySetup = async () => {
+    if (!securitySetup.currentPassword || !securitySetup.securityAnswer) {
+      toast.error('Password and Security Answer are required.');
+      return;
+    }
+    try {
+      const response = await authAPI.setupSecurity(securitySetup);
+      if (response.success) {
+        setRecoveryCode(response.data.recoveryCode);
+        setSecuritySetup({ ...securitySetup, currentPassword: '', securityAnswer: '' });
+        toast.success('Security recovery configured successfully.');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to configure security recovery');
     }
   };
 
@@ -206,6 +230,67 @@ export default function Settings() {
                   <Button variant="contained" onClick={handlePasswordChange}>Change Password</Button>
                 </Grid>
               </Grid>
+
+              <Divider sx={{ my: 3 }} />
+              
+              <Typography variant="h6" sx={{ mb: 2 }}>Account Recovery Setup</Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                Configure a security question and generate a recovery code. These will be required if you ever forget your password.
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField 
+                    fullWidth 
+                    label="Current Password" 
+                    type="password" 
+                    value={securitySetup.currentPassword} 
+                    onChange={(e) => setSecuritySetup((prev) => ({ ...prev, currentPassword: e.target.value }))} 
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField 
+                    fullWidth 
+                    select 
+                    SelectProps={{ native: true }}
+                    label="Security Question" 
+                    value={securitySetup.securityQuestion} 
+                    onChange={(e) => setSecuritySetup((prev) => ({ ...prev, securityQuestion: e.target.value }))}
+                  >
+                    <option value="What was the name of your first school?">What was the name of your first school?</option>
+                    <option value="What was the name of your first teacher?">What was the name of your first teacher?</option>
+                    <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+                    <option value="What was the first place you traveled to?">What was the first place you traveled to?</option>
+                    <option value="What was the name of your childhood best friend?">What was the name of your childhood best friend?</option>
+                  </TextField>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField 
+                    fullWidth 
+                    label="Security Answer" 
+                    value={securitySetup.securityAnswer} 
+                    onChange={(e) => setSecuritySetup((prev) => ({ ...prev, securityAnswer: e.target.value }))} 
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button variant="contained" color="primary" onClick={handleSecuritySetup}>Generate Recovery Code</Button>
+                </Grid>
+                {recoveryCode && (
+                  <Grid item xs={12}>
+                    <Box sx={{ p: 2, bgcolor: 'warning.light', borderRadius: 2 }}>
+                      <Typography variant="subtitle2" sx={{ color: 'warning.contrastText', fontWeight: 'bold' }}>
+                        SAVE THIS RECOVERY CODE NOW:
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontFamily: 'monospace', mt: 1, wordBreak: 'break-all' }}>
+                        {recoveryCode}
+                      </Typography>
+                      <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                        This code will NEVER be displayed again. You will need it to recover your account.
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+
               <Divider sx={{ my: 2 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>Display Settings</Typography>
               <FormControlLabel

@@ -10,7 +10,7 @@ router.use(authenticate);
 router.get('/', supplierController.getSuppliers);
 router.post(
   '/',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   supplierController.createSupplier
 );
 
@@ -21,12 +21,12 @@ router.get('/:id/products', supplierController.getSupplierProducts);
 router.get('/:id', supplierController.getSupplierById);
 router.put(
   '/:id',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   supplierController.updateSupplier
 );
 router.delete(
   '/:id',
-  authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]),
+  authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]),
   supplierController.deleteSupplier
 );
 

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 const { ROLE_IDS } = require('../utils/roles');
 const crypto = require('crypto');
 const {
@@ -14,11 +15,11 @@ const { sendMail } = require('../services/mailer');
  * Register a new user
  */
 exports.register = asyncHandler(async (req, res) => {
-  const { fullName, email, password, phone, role } = req.body;
+  const { fullName, email, password, phone, role, securityQuestion, securityAnswer } = req.body;
 
   // Validate input
-  if (!fullName || !email || !password || !phone) {
-    throw new APIError('All fields are required', 400);
+  if (!fullName || !email || !password || !phone || !securityQuestion || !securityAnswer) {
+    throw new APIError('All fields are required, including security question and answer', 400);
   }
 
   // Check if user already exists
@@ -27,6 +28,12 @@ exports.register = asyncHandler(async (req, res) => {
     throw new APIError('User already registered with this email', 409);
   }
 
+  const normalizedAnswer = securityAnswer.trim().toLowerCase();
+  const securityAnswerHash = await bcrypt.hash(normalizedAnswer, 12);
+
+  const recoveryCode = crypto.randomBytes(32).toString('hex');
+  const recoveryCodeHash = crypto.createHash('sha256').update(recoveryCode).digest('hex');
+
   // Create new user
   const user = new User({
     fullName,
@@ -34,6 +41,9 @@ exports.register = asyncHandler(async (req, res) => {
     password,
     phone,
     role: role || ROLE_IDS.VIEWER,
+    securityQuestion,
+    securityAnswerHash,
+    recoveryCodeHash,
   });
 
   const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -42,12 +52,16 @@ exports.register = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  await sendMail({
-    to: user.email,
-    subject: 'Verify your email',
-    text: `Verify your email with this token: ${verificationToken}`,
-    html: `<p>Verify your email using this token:</p><p><b>${verificationToken}</b></p>`,
-  });
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Verify your email',
+      text: `Verify your email with this token: ${verificationToken}`,
+      html: `<p>Verify your email using this token:</p><p><b>${verificationToken}</b></p>`,
+    });
+  } catch (error) {
+    logger.warn(`Failed to send verification email to ${user.email}. SMTP might not be configured.`);
+  }
 
   // Generate tokens
   const payload = { id: user._id, email: user.email, role: user.role };
@@ -64,6 +78,7 @@ exports.register = asyncHandler(async (req, res) => {
       user: user.toJSON(),
       token,
       refreshToken,
+      recoveryCode,
     },
   });
 });
@@ -84,12 +99,18 @@ exports.login = asyncHandler(async (req, res) => {
     '+password'
   );
   if (!user) {
-    throw new APIError('Invalid email or password', 401);
+    throw new APIError('Account does not exist. Please create an account.', 404);
   }
 
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     throw new APIError('Invalid email or password', 401);
+  }
+
+  // Strict Role Validation
+  const requestedRole = req.body.role || 'user';
+  if (user.role !== requestedRole) {
+    throw new APIError('Invalid role. Please select the role associated with your account.', 403);
   }
 
   // Check if user is active
@@ -237,6 +258,43 @@ exports.changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+exports.setupSecurity = asyncHandler(async (req, res) => {
+  const { currentPassword, securityQuestion, securityAnswer } = req.body;
+  
+  if (!currentPassword || !securityQuestion || !securityAnswer) {
+    throw new APIError('Current password, security question, and answer are required', 400);
+  }
+
+  const user = await User.findById(req.user.id).select('+password');
+  if (!user) {
+    throw new APIError('User not found', 404);
+  }
+
+  const isPasswordValid = await user.comparePassword(currentPassword);
+  if (!isPasswordValid) {
+    throw new APIError('Current password is incorrect', 401);
+  }
+
+  const recoveryCode = crypto.randomBytes(32).toString('hex');
+  const recoveryCodeHash = crypto.createHash('sha256').update(recoveryCode).digest('hex');
+
+  const normalizedAnswer = securityAnswer.trim().toLowerCase();
+  const hashedAnswer = await bcrypt.hash(normalizedAnswer, 12);
+
+  user.securityQuestion = securityQuestion;
+  user.securityAnswerHash = hashedAnswer;
+  user.recoveryCodeHash = recoveryCodeHash;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Security recovery configured successfully. Save this recovery code securely!',
+    data: {
+      recoveryCode,
+    },
+  });
+});
+
 exports.forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -245,34 +303,93 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) {
-    throw new APIError('User not found', 404);
-  }
-
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  user.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
-  await user.save();
-
-  await sendMail({
-    to: user.email,
-    subject: 'Password reset request',
-    text: `Reset your password using this token: ${resetToken}`,
-    html: `<p>Reset your password using this token:</p><p><b>${resetToken}</b></p>`,
-  });
+  
+  const question = (user && user.securityQuestion) 
+    ? user.securityQuestion 
+    : "What was the name of your first school?";
 
   res.status(200).json({
     success: true,
-    message: 'Password reset instructions sent to your email',
+    message: 'If an account exists for this email, please answer your security question.',
+    data: {
+      securityQuestion: question,
+    },
+  });
+});
+
+exports.verifyRecovery = asyncHandler(async (req, res) => {
+  const { email, recoveryCode, securityAnswer } = req.body;
+
+  if (!email || !recoveryCode || !securityAnswer) {
+    throw new APIError('Email, recovery code, and security answer are required', 400);
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() }).select('+securityAnswerHash +recoveryCodeHash');
+  
+  if (!user) {
+    throw new APIError('Invalid recovery credentials.', 400);
+  }
+
+  if (user.recoveryLockedUntil && user.recoveryLockedUntil > Date.now()) {
+    throw new APIError('Recovery locked due to too many failed attempts. Try again later.', 403);
+  }
+
+  const normalizedAnswer = securityAnswer.trim().toLowerCase();
+  let isValidAnswer = false;
+  let isValidCode = false;
+
+  if (user.securityAnswerHash) {
+    isValidAnswer = await bcrypt.compare(normalizedAnswer, user.securityAnswerHash);
+  }
+
+  if (user.recoveryCodeHash) {
+    const inputHash = crypto.createHash('sha256').update(recoveryCode.trim()).digest('hex');
+    isValidCode = (inputHash === user.recoveryCodeHash);
+  }
+
+  console.log('isValidAnswer:', isValidAnswer, 'isValidCode:', isValidCode);
+
+  if (!isValidAnswer || !isValidCode) {
+    user.recoveryAttempts = (user.recoveryAttempts || 0) + 1;
+    if (user.recoveryAttempts >= 5) {
+      user.recoveryLockedUntil = Date.now() + 15 * 60 * 1000;
+    }
+    await user.save();
+    throw new APIError(`Invalid recovery credentials. A: ${isValidAnswer} C: ${isValidCode}`, 400);
+  }
+
+  user.recoveryAttempts = 0;
+  user.recoveryLockedUntil = undefined;
+  
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Recovery verified.',
+    data: {
+      resetToken,
+    },
   });
 });
 
 exports.resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
-  const { password } = req.body;
+  const { password, confirmPassword } = req.body;
 
-  if (!password) {
-    throw new APIError('Password is required', 400);
+  if (!password || !confirmPassword) {
+    throw new APIError('Password and confirm password are required', 400);
+  }
+
+  if (password !== confirmPassword) {
+    throw new APIError('Passwords do not match', 400);
+  }
+
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    throw new APIError('Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.', 400);
   }
 
   const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -282,7 +399,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   }).select('+password');
 
   if (!user) {
-    throw new APIError('Invalid or expired reset token', 400);
+    throw new APIError('This password reset link is invalid or has expired.', 400);
   }
 
   user.password = password;

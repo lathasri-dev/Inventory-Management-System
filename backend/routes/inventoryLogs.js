@@ -11,6 +11,6 @@ router.use(authenticate);
 router.get('/', inventoryLogController.getInventoryLogs);
 
 // Perform a manual stock adjustment
-router.post('/adjustment', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER, ROLE_IDS.SALES_STAFF]), inventoryLogController.createAdjustment);
+router.post('/adjustment', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER, ROLE_IDS.USER]), inventoryLogController.createAdjustment);
 
 module.exports = router;

@@ -8,7 +8,7 @@ router.use(authenticate);
 
 router.get('/', salesController.getSales);
 router.get('/:id', salesController.getSaleById);
-router.post('/', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER, ROLE_IDS.SALES_STAFF]), salesController.createSale);
-router.delete('/:id', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]), salesController.deleteSale);
+router.post('/', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER, ROLE_IDS.USER]), salesController.createSale);
+router.delete('/:id', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]), salesController.deleteSale);
 
 module.exports = router;

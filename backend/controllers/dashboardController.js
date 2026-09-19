@@ -6,6 +6,7 @@ const Sale = require('../models/Sale');
 const Purchase = require('../models/Purchase');
 const ActivityLog = require('../models/ActivityLog');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 exports.getStats = async (req, res) => {
   try {
@@ -22,6 +23,7 @@ exports.getStats = async (req, res) => {
       purchaseOrders,
       expiringSoonProducts,
       totalInventoryValRes,
+      totalUsers,
     ] = await Promise.all([
       Product.countDocuments({ isActive: true }),
       Category.countDocuments({ isActive: true }),
@@ -44,6 +46,7 @@ exports.getStats = async (req, res) => {
         { $match: { isActive: true } },
         { $group: { _id: null, totalValue: { $sum: { $multiply: ['$price', '$quantity'] } } } },
       ]),
+      User.countDocuments({ isActive: true }),
     ]);
 
     const recentActivities = await ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'fullName email role');
@@ -71,6 +74,7 @@ exports.getStats = async (req, res) => {
         purchaseOrders,
         expiringSoonProducts,
         totalInventoryValue: totalInventoryValRes[0]?.totalValue || 0,
+        totalUsers,
         recentActivities,
         recentNotifications,
         topSellingProducts,

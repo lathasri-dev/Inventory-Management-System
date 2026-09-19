@@ -7,6 +7,6 @@ const { ROLE_IDS } = require('../utils/roles');
 router.use(authenticate);
 
 router.get('/', purchaseController.getPurchases);
-router.post('/', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]), purchaseController.createPurchase);
+router.post('/', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER, ROLE_IDS.USER]), purchaseController.createPurchase);
 
 module.exports = router;

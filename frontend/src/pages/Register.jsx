@@ -21,6 +21,7 @@ import {
   Lock,
   Person,
   Phone,
+  ContentCopy,
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
@@ -43,8 +44,12 @@ export default function Register() {
     phone: '',
     password: '',
     confirmPassword: '',
+    role: 'user', // Default role
+    securityQuestion: 'What was the name of your first school?',
+    securityAnswer: '',
   });
   const [errors, setErrors] = useState({});
+  const [recoveryCode, setRecoveryCode] = useState(null);
 
   const validateForm = () => {
     const newErrors = {};
@@ -72,6 +77,14 @@ export default function Register() {
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!formData.securityQuestion) {
+      newErrors.securityQuestion = 'Security question is required';
+    }
+
+    if (!formData.securityAnswer.trim()) {
+      newErrors.securityAnswer = 'Security answer is required';
     }
 
     setErrors(newErrors);
@@ -107,6 +120,9 @@ export default function Register() {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        role: formData.role, // Pass the role to backend
+        securityQuestion: formData.securityQuestion,
+        securityAnswer: formData.securityAnswer,
       });
 
       if (response.success) {
@@ -117,8 +133,8 @@ export default function Register() {
             refreshToken: response.data.refreshToken,
           })
         );
-        toast.success('Registration successful. Verify email inside your console.');
-        navigate('/');
+        setRecoveryCode(response.data.recoveryCode);
+        toast.success('Registration successful. Save your recovery code!');
       }
     } catch (err) {
       const errorMessage = err.message || 'Registration failed';
@@ -240,6 +256,57 @@ export default function Register() {
 
           <TextField
             fullWidth
+            select
+            label="Account Role"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            disabled={isLoading}
+            SelectProps={{
+              native: true,
+            }}
+          >
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="user">User</option>
+          </TextField>
+
+          <TextField
+            fullWidth
+            select
+            label="Security Question"
+            name="securityQuestion"
+            value={formData.securityQuestion}
+            onChange={handleChange}
+            disabled={isLoading}
+            error={!!errors.securityQuestion}
+            helperText={errors.securityQuestion}
+            SelectProps={{
+              native: true,
+            }}
+          >
+            <option value="What was the name of your first school?">What was the name of your first school?</option>
+            <option value="What was the name of your first teacher?">What was the name of your first teacher?</option>
+            <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+            <option value="What was your childhood nickname?">What was your childhood nickname?</option>
+            <option value="What was the first place you traveled to?">What was the first place you traveled to?</option>
+            <option value="What was your favorite subject in school?">What was your favorite subject in school?</option>
+          </TextField>
+
+          <TextField
+            fullWidth
+            label="Security Answer"
+            name="securityAnswer"
+            value={formData.securityAnswer}
+            onChange={handleChange}
+            placeholder="Your answer"
+            disabled={isLoading}
+            error={!!errors.securityAnswer}
+            helperText={errors.securityAnswer}
+          />
+
+          <TextField
+            fullWidth
             label="Confirm Password"
             name="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
@@ -300,6 +367,36 @@ export default function Register() {
           </Button>
         </Stack>
       </Box>
+
+      {recoveryCode && (
+        <Box sx={{ mt: 3, p: 2, bgcolor: 'warning.light', borderRadius: 2 }}>
+          <Typography variant="subtitle1" sx={{ color: 'warning.contrastText', fontWeight: 'bold' }}>
+            REGISTRATION SUCCESSFUL!
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'warning.contrastText', mt: 1 }}>
+            Save this recovery code somewhere safe. You will need it if you forget your password. It will NEVER be shown again.
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.3)', p: 1, borderRadius: 1, mt: 2, mb: 2 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', flexGrow: 1 }}>
+              {recoveryCode}
+            </Typography>
+            <IconButton onClick={() => {
+              navigator.clipboard.writeText(recoveryCode);
+              toast.success('Recovery code copied to clipboard!');
+            }} color="inherit">
+              <ContentCopy />
+            </IconButton>
+          </Box>
+          <Button 
+            variant="contained" 
+            fullWidth 
+            color="primary"
+            onClick={() => navigate('/')}
+          >
+            I have saved the code, proceed to app
+          </Button>
+        </Box>
+      )}
 
       <Divider sx={{ my: 3 }} />
 

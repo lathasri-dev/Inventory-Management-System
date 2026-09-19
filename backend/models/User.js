@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: Object.values(ROLE_IDS),
-      default: ROLE_IDS.VIEWER,
+      default: ROLE_IDS.USER,
       set: normalizeRole,
     },
     branch: {
@@ -65,6 +65,26 @@ const userSchema = new mongoose.Schema(
     emailVerificationExpire: {
       type: Date,
       select: false,
+    },
+    securityQuestion: {
+      type: String,
+      required: true,
+    },
+    securityAnswerHash: {
+      type: String,
+      select: false,
+      required: true,
+    },
+    recoveryCodeHash: {
+      type: String,
+      select: false,
+    },
+    recoveryAttempts: {
+      type: Number,
+      default: 0,
+    },
+    recoveryLockedUntil: {
+      type: Date,
     },
     resetPasswordToken: {
       type: String,
@@ -112,6 +132,8 @@ userSchema.methods.toJSON = function () {
   delete obj.emailVerificationExpire;
   delete obj.resetPasswordToken;
   delete obj.resetPasswordExpire;
+  delete obj.securityAnswerHash;
+  delete obj.recoveryCodeHash;
   return obj;
 };
 

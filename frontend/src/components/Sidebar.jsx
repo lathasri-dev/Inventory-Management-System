@@ -46,13 +46,26 @@ const menuItems = [
 export default function Sidebar() {
   const { user } = useAuth();
   const role = normalizeRole(user?.role);
-  const isAdmin = role === ROLE_IDS.SUPER_ADMIN || role === ROLE_IDS.ADMIN;
+  const isAdmin = role === ROLE_IDS.ADMIN;
+  const isManager = role === ROLE_IDS.MANAGER;
+  const isUser = role === ROLE_IDS.USER;
 
   const visibleItems = menuItems.filter((item) => {
-    if (item.path === '/users' || item.path === '/audit-logs' || item.path === '/settings') {
-      return isAdmin;
+    if (isAdmin) return true; // Admin sees everything
+    
+    if (isManager) {
+      // Manager cannot see Admin-only routes
+      const adminOnlyPaths = ['/users', '/audit-logs', '/settings', '/categories'];
+      return !adminOnlyPaths.includes(item.path);
     }
-    return true;
+    
+    if (isUser) {
+      // User sees only specific operational routes
+      const userPaths = ['/dashboard', '/products', '/stock-control', '/sales', '/purchases', '/customers'];
+      return userPaths.includes(item.path);
+    }
+    
+    return false;
   });
 
   return (

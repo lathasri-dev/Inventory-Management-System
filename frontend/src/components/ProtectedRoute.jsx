@@ -28,10 +28,9 @@ export default function ProtectedRoute({ requiredRole = null }) {
         .get('/auth/me')
         .then((res) => {
           if (res.success && res.data) {
-            // Restore user object in Redux without changing the token
             dispatch(
               loginSuccess({
-                user: res.data,
+                user: res.data.user || res.data,
                 token,
                 refreshToken: localStorage.getItem('refreshToken') || token,
               })

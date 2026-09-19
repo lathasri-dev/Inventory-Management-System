@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
  */
 const connectDB = async () => {
   try {
-    const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/inventory_db';
+    const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://lathasri:Lathasri2006@cluster0.tgq6due.mongodb.net/?appName=Cluster0';
 
     const conn = await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,

@@ -117,6 +117,7 @@ exports.createPurchase = async (req, res) => {
           status,
           notes,
           branch: req.user?.branch || undefined,
+          createdBy: req.user.id,
         },
       ], { session: opts.session });
       createdPurchase = purchase[0];
@@ -133,6 +134,7 @@ exports.createPurchase = async (req, res) => {
         status,
         notes,
         branch: req.user?.branch || undefined,
+        createdBy: req.user.id,
       });
     }
 

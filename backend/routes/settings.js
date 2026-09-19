@@ -11,9 +11,9 @@ router.use(authenticate);
 router.get('/', settingsController.getSettings);
 
 // Update settings (Admins only)
-router.put('/', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN]), settingsController.updateSettings);
+router.put('/', authorize([ROLE_IDS.ADMIN]), settingsController.updateSettings);
 
 // Trigger a database backup (Admins only)
-router.get('/backup', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN]), settingsController.backupDatabase);
+router.get('/backup', authorize([ROLE_IDS.ADMIN]), settingsController.backupDatabase);
 
 module.exports = router;

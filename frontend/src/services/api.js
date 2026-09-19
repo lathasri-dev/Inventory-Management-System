@@ -4,7 +4,7 @@ import apiClient from './apiClient';
  * Authentication API service
  */
 export const authAPI = {
-  login: (email, password) => apiClient.post('/auth/login', { email, password }),
+  login: (email, password, role) => apiClient.post('/auth/login', { email, password, role }),
 
   register: (userData) => apiClient.post('/auth/register', userData),
 
@@ -19,10 +19,14 @@ export const authAPI = {
 
   changePassword: (passwords) => apiClient.post('/auth/change-password', passwords),
 
+  setupSecurity: (data) => apiClient.post('/auth/setup-security', data),
+
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
 
-  resetPassword: (token, password) =>
-    apiClient.post(`/auth/reset-password/${token}`, { password }),
+  verifyRecovery: (data) => apiClient.post('/auth/verify-recovery', data),
+
+  resetPassword: (token, password, confirmPassword) =>
+    apiClient.post(`/auth/reset-password/${token}`, { password, confirmPassword }),
 
   verifyEmail: (token) => apiClient.get(`/auth/verify-email/${token}`),
 

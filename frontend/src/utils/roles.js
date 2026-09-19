@@ -1,28 +1,27 @@
 export const ROLE_IDS = {
-  SUPER_ADMIN: 'super_admin',
   ADMIN: 'admin',
-  INVENTORY_MANAGER: 'inventory_manager',
-  SALES_STAFF: 'sales_staff',
-  VIEWER: 'viewer',
+  MANAGER: 'manager',
+  USER: 'user',
 };
 
 const LEGACY_ROLE_MAP = {
-  superadmin: ROLE_IDS.SUPER_ADMIN,
-  super_admin: ROLE_IDS.SUPER_ADMIN,
-  'super admin': ROLE_IDS.SUPER_ADMIN,
+  superadmin: ROLE_IDS.ADMIN,
+  super_admin: ROLE_IDS.ADMIN,
+  'super admin': ROLE_IDS.ADMIN,
   admin: ROLE_IDS.ADMIN,
-  manager: ROLE_IDS.INVENTORY_MANAGER,
-  inventorymanager: ROLE_IDS.INVENTORY_MANAGER,
-  'inventory manager': ROLE_IDS.INVENTORY_MANAGER,
-  salesstaff: ROLE_IDS.SALES_STAFF,
-  'sales staff': ROLE_IDS.SALES_STAFF,
-  employee: ROLE_IDS.SALES_STAFF,
-  viewer: ROLE_IDS.VIEWER,
+  manager: ROLE_IDS.MANAGER,
+  inventorymanager: ROLE_IDS.MANAGER,
+  'inventory manager': ROLE_IDS.MANAGER,
+  salesstaff: ROLE_IDS.USER,
+  'sales staff': ROLE_IDS.USER,
+  employee: ROLE_IDS.USER,
+  viewer: ROLE_IDS.USER,
+  user: ROLE_IDS.USER,
 };
 
 export const normalizeRole = (role) => {
   if (!role) {
-    return ROLE_IDS.VIEWER;
+    return ROLE_IDS.USER;
   }
 
   const normalized = String(role).trim().toLowerCase().replace(/[-\s]+/g, '_');
@@ -31,7 +30,7 @@ export const normalizeRole = (role) => {
     return normalized;
   }
 
-  return LEGACY_ROLE_MAP[String(role).trim().toLowerCase().replace(/[_\s-]+/g, '')] || ROLE_IDS.VIEWER;
+  return LEGACY_ROLE_MAP[String(role).trim().toLowerCase().replace(/[_\s-]+/g, '')] || ROLE_IDS.USER;
 };
 
 export const roleMatches = (role, allowedRoles = []) => {

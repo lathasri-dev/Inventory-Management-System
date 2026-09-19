@@ -34,9 +34,9 @@ import {
 } from '../redux/slices/authSlice';
 
 const DEMO_ROLES = [
-  { label: 'Admin', email: 'admin@example.com', password: 'Admin@123', color: '#6366f1' },
-  { label: 'Manager', email: 'manager@example.com', password: 'Manager@123', color: '#14b8a6' },
-  { label: 'Viewer', email: 'viewer@example.com', password: 'Viewer@123', color: '#f59e0b' },
+  { label: 'Admin', email: 'admin_1789726102211@example.com', password: 'Password123!', color: '#6366f1' },
+  { label: 'Manager', email: 'manager_1789726102211@example.com', password: 'Password123!', color: '#14b8a6' },
+  { label: 'User', email: 'user_1789726102211@example.com', password: 'Password123!', color: '#f59e0b' },
 ];
 
 export default function Login() {
@@ -46,7 +46,7 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', role: 'user' });
   const [fieldErrors, setFieldErrors] = useState({});
 
   // If already authenticated, redirect to dashboard
@@ -57,7 +57,13 @@ export default function Login() {
   }, [isAuthenticated, navigate]);
 
   const fillDemoCredentials = (demo) => {
-    setFormData({ email: demo.email, password: demo.password });
+    // Determine role from the label
+    let roleVal = 'user';
+    if (demo.label === 'Admin') roleVal = 'admin';
+    else if (demo.label === 'Manager') roleVal = 'manager';
+    else roleVal = 'user';
+    
+    setFormData({ email: demo.email, password: demo.password, role: roleVal });
     setFieldErrors({});
     if (error) dispatch(clearError());
   };
@@ -85,7 +91,7 @@ export default function Login() {
 
     try {
       dispatch(loginStart());
-      const response = await authAPI.login(formData.email, formData.password);
+      const response = await authAPI.login(formData.email, formData.password, formData.role);
 
       if (response.success) {
         dispatch(
@@ -100,15 +106,15 @@ export default function Login() {
         
         // Role-based redirection logic
         setTimeout(() => {
-          const role = response.data.user?.role || 'viewer';
+          const role = response.data.user?.role || 'user';
           const normalized = String(role).trim().toLowerCase();
           
           if (normalized.includes('sales')) {
             navigate('/sales');
           } else if (normalized.includes('manager')) {
             navigate('/products');
-          } else if (normalized.includes('viewer')) {
-            navigate('/reports');
+          } else if (normalized.includes('user')) {
+            navigate('/dashboard');
           } else {
             // Admin or Super Admin
             navigate('/dashboard');
@@ -172,35 +178,60 @@ export default function Login() {
       {/* Form */}
       <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack spacing={2.5}>
-          <TextField
-            fullWidth
-            label="Email Address"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="admin@example.com"
-            disabled={isLoading || success}
-            autoComplete="email"
-            autoFocus
-            error={!!fieldErrors.email}
-            helperText={fieldErrors.email}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Email fontSize="small" sx={{ color: fieldErrors.email ? 'error.main' : 'text.secondary', opacity: 0.7 }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '10px',
-                transition: 'box-shadow 0.2s',
-                '&:hover': { boxShadow: '0 0 0 3px rgba(99,102,241,0.08)' },
-                '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(99,102,241,0.12)' },
-              },
-            }}
-          />
+            <TextField
+              fullWidth
+              label="Email Address"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="admin@example.com"
+              disabled={isLoading || success}
+              autoComplete="email"
+              autoFocus
+              error={!!fieldErrors.email}
+              helperText={fieldErrors.email}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email fontSize="small" sx={{ color: fieldErrors.email ? 'error.main' : 'text.secondary', opacity: 0.7 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  transition: 'box-shadow 0.2s',
+                  '&:hover': { boxShadow: '0 0 0 3px rgba(99,102,241,0.08)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(99,102,241,0.12)' },
+                },
+              }}
+            />
+
+            <TextField
+              fullWidth
+              select
+              label="Account Role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              disabled={isLoading || success}
+              SelectProps={{
+                native: true,
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  transition: 'box-shadow 0.2s',
+                  '&:hover': { boxShadow: '0 0 0 3px rgba(99,102,241,0.08)' },
+                  '&.Mui-focused': { boxShadow: '0 0 0 3px rgba(99,102,241,0.12)' },
+                },
+              }}
+            >
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="user">User</option>
+            </TextField>
 
           <TextField
             fullWidth

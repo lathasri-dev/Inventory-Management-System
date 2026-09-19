@@ -45,16 +45,8 @@ import RequestVerification from './pages/RequestVerification';
 import AuditLogs from './pages/AuditLogs';
 
 export default function App() {
-  // TEMPORARY FIX: Force logout on app load so you can see the Login Page
-  useEffect(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    // Optional: reload the page once to clear the Redux state if needed
-    if (!sessionStorage.getItem('forcedLogout')) {
-      sessionStorage.setItem('forcedLogout', 'true');
-      window.location.reload();
-    }
-  }, []);
+  // Initialize app state
+
 
   return (
     <Provider store={store}>
@@ -73,18 +65,27 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
+                {/* Available to all authenticated users */}
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/products" element={<Products />} />
-                <Route path="/categories" element={<Categories />} />
                 <Route path="/stock-control" element={<StockLogs />} />
-                <Route path="/suppliers" element={<Suppliers />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/users" element={<Users />} />
                 <Route path="/sales" element={<Sales />} />
-                <Route path="/purchases" element={<Purchases />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/audit-logs" element={<AuditLogs />} />
+
+                {/* Manager & Admin Only */}
+                <Route element={<ProtectedRoute requiredRole={['admin', 'manager']} />}>
+                  <Route path="/suppliers" element={<Suppliers />} />
+                  <Route path="/customers" element={<Customers />} />
+                  <Route path="/purchases" element={<Purchases />} />
+                  <Route path="/reports" element={<Reports />} />
+                </Route>
+
+                {/* Admin Only */}
+                <Route element={<ProtectedRoute requiredRole={['admin']} />}>
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/audit-logs" element={<AuditLogs />} />
+                </Route>
               </Route>
             </Route>
 

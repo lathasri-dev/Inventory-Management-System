@@ -1,1143 +1,363 @@
 /**
- * seedData.js — Idempotent seed script for Inventory Management System
- *
- * Creates: 5 Categories → 10 Suppliers → 20 Products → 15 Customers
- *
- * Usage:
- *   cd backend
- *   node scripts/seedData.js
- *
- * Safe to run multiple times — uses findOneAndUpdate with upsert:true
- * so existing records are updated, not duplicated.
+ * seedData.js
+ * Comprehensive seed script to generate interconnected realistic business data.
  */
 
 const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Models
+const Branch = require('../models/Branch');
 const Category = require('../models/Category');
 const Supplier = require('../models/Supplier');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
+const Purchase = require('../models/Purchase');
+const Sale = require('../models/Sale');
+const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
+const InventoryLog = require('../models/InventoryLog');
+const { ROLE_IDS } = require('../utils/roles');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/inventory_db';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SEED DATA DEFINITIONS
-// ─────────────────────────────────────────────────────────────────────────────
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const randomDate = (start, end) => new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 
-const CATEGORIES_DATA = [
-  {
-    name: 'Electronics',
-    description: 'Consumer electronics, gadgets, and electrical components',
-    color: '#1565C0',
-    icon: 'devices',
-    sortOrder: 1,
-  },
-  {
-    name: 'Office Supplies',
-    description: 'Stationery, printing materials, and office accessories',
-    color: '#2E7D32',
-    icon: 'work',
-    sortOrder: 2,
-  },
-  {
-    name: 'Furniture',
-    description: 'Office and home furniture including desks, chairs, and storage',
-    color: '#E65100',
-    icon: 'chair',
-    sortOrder: 3,
-  },
-  {
-    name: 'Industrial Tools',
-    description: 'Power tools, hand tools, and industrial equipment',
-    color: '#6A1B9A',
-    icon: 'build',
-    sortOrder: 4,
-  },
-  {
-    name: 'Packaging Materials',
-    description: 'Boxes, tapes, bubble wrap, and shipping supplies',
-    color: '#00838F',
-    icon: 'inventory_2',
-    sortOrder: 5,
-  },
-];
-
-const SUPPLIERS_DATA = [
-  {
-    name: 'Rajesh Kumar',
-    companyName: 'Tech Vision Pvt Ltd',
-    businessType: 'manufacturer',
-    email: 'rajesh@techvision.in',
-    phone: '+91-9876543210',
-    alternatePhone: '+91-9876543211',
-    website: 'https://techvision.in',
-    contactPerson: 'Rajesh Kumar',
-    address: '45, Industrial Area, Phase II',
-    city: 'Hyderabad',
-    state: 'Telangana',
-    country: 'India',
-    pincode: '500081',
-    gstNumber: '36AABCT1234C1Z5',
-    panNumber: 'AABCT1234C',
-    paymentTerms: 'net_30',
-    creditLimit: 500000,
-    rating: 4.5,
-    notes: 'Primary electronics supplier. Reliable with consistent quality.',
-    bankDetails: {
-      bankName: 'HDFC Bank',
-      accountNumber: '50200012345678',
-      ifscCode: 'HDFC0001234',
-      branchName: 'Hitech City Branch',
-    },
-  },
-  {
-    name: 'Priya Sharma',
-    companyName: 'Office World Distributors',
-    businessType: 'distributor',
-    email: 'priya@officeworld.in',
-    phone: '+91-9823456789',
-    alternatePhone: '',
-    website: 'https://officeworld.in',
-    contactPerson: 'Priya Sharma',
-    address: '12, Commercial Street',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    country: 'India',
-    pincode: '560001',
-    gstNumber: '29AABCO5678D1Z2',
-    panNumber: 'AABCO5678D',
-    paymentTerms: 'net_15',
-    creditLimit: 200000,
-    rating: 4.2,
-    notes: 'Office supplies distributor. Good pricing on bulk orders.',
-    bankDetails: {
-      bankName: 'ICICI Bank',
-      accountNumber: '012345678901',
-      ifscCode: 'ICIC0000123',
-      branchName: 'MG Road Branch',
-    },
-  },
-  {
-    name: 'Suresh Patel',
-    companyName: 'Furniture Craft Industries',
-    businessType: 'manufacturer',
-    email: 'suresh@furniturecraft.in',
-    phone: '+91-9765432198',
-    alternatePhone: '+91-9765432199',
-    website: '',
-    contactPerson: 'Suresh Patel',
-    address: '78, GIDC Industrial Estate',
-    city: 'Ahmedabad',
-    state: 'Gujarat',
-    country: 'India',
-    pincode: '382330',
-    gstNumber: '24AABCF9012E1Z1',
-    panNumber: 'AABCF9012E',
-    paymentTerms: 'net_60',
-    creditLimit: 1000000,
-    rating: 3.8,
-    notes: 'Bulk furniture supplier. Lead time 3-4 weeks.',
-    bankDetails: {
-      bankName: 'SBI',
-      accountNumber: '30123456789',
-      ifscCode: 'SBIN0001234',
-      branchName: 'GIDC Branch',
-    },
-  },
-  {
-    name: 'Anitha Reddy',
-    companyName: 'Power Tools India',
-    businessType: 'wholesaler',
-    email: 'anitha@powertoolsindia.com',
-    phone: '+91-9898765432',
-    alternatePhone: '',
-    website: 'https://powertoolsindia.com',
-    contactPerson: 'Anitha Reddy',
-    address: '33, Industrial Area, Nacharam',
-    city: 'Hyderabad',
-    state: 'Telangana',
-    country: 'India',
-    pincode: '500076',
-    gstNumber: '36AABCP3456F1Z8',
-    panNumber: 'AABCP3456F',
-    paymentTerms: 'net_30',
-    creditLimit: 300000,
-    rating: 4.0,
-    notes: 'Industrial tools wholesaler. Competitive pricing on orders >50 units.',
-    bankDetails: {
-      bankName: 'Axis Bank',
-      accountNumber: '915010056789012',
-      ifscCode: 'UTIB0000234',
-      branchName: 'Nacharam Branch',
-    },
-  },
-  {
-    name: 'Vikram Singh',
-    companyName: 'PackSmart Solutions',
-    businessType: 'manufacturer',
-    email: 'vikram@packsmart.in',
-    phone: '+91-9711234567',
-    alternatePhone: '+91-9711234568',
-    website: 'https://packsmart.in',
-    contactPerson: 'Vikram Singh',
-    address: '201, Okhla Industrial Area, Phase III',
-    city: 'New Delhi',
-    state: 'Delhi',
-    country: 'India',
-    pincode: '110020',
-    gstNumber: '07AABCP7890G1Z4',
-    panNumber: 'AABCP7890G',
-    paymentTerms: 'net_15',
-    creditLimit: 150000,
-    rating: 4.7,
-    notes: 'Best packaging supplier. Express delivery available.',
-    bankDetails: {
-      bankName: 'Kotak Mahindra Bank',
-      accountNumber: '1234567890123',
-      ifscCode: 'KKBK0000123',
-      branchName: 'Okhla Branch',
-    },
-  },
-  {
-    name: 'Meena Krishnan',
-    companyName: 'Digital Components Hub',
-    businessType: 'importer',
-    email: 'meena@digitalcompHub.com',
-    phone: '+91-9944332211',
-    alternatePhone: '',
-    website: 'https://digitalcompHub.com',
-    contactPerson: 'Meena Krishnan',
-    address: '56, Anna Salai',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    country: 'India',
-    pincode: '600002',
-    gstNumber: '33AABCD1234H1Z9',
-    panNumber: 'AABCD1234H',
-    paymentTerms: 'net_45',
-    creditLimit: 750000,
-    rating: 4.3,
-    notes: 'Import specialist for electronic components from China and Taiwan.',
-    bankDetails: {
-      bankName: 'Yes Bank',
-      accountNumber: '013456789012345',
-      ifscCode: 'YESB0000123',
-      branchName: 'Anna Salai Branch',
-    },
-  },
-  {
-    name: 'Rohit Agarwal',
-    companyName: 'Stationery Plus',
-    businessType: 'wholesaler',
-    email: 'rohit@stationeryplus.in',
-    phone: '+91-9321456789',
-    alternatePhone: '+91-9321456790',
-    website: '',
-    contactPerson: 'Rohit Agarwal',
-    address: '88, Commercial Complex, Lajpat Nagar',
-    city: 'New Delhi',
-    state: 'Delhi',
-    country: 'India',
-    pincode: '110024',
-    gstNumber: '07AABCS5678I1Z3',
-    panNumber: 'AABCS5678I',
-    paymentTerms: 'immediate',
-    creditLimit: 100000,
-    rating: 3.5,
-    notes: 'Wide range of stationery products. Cash discount available.',
-    bankDetails: {
-      bankName: 'Punjab National Bank',
-      accountNumber: '2345678901234',
-      ifscCode: 'PUNB0001234',
-      branchName: 'Lajpat Nagar Branch',
-    },
-  },
-  {
-    name: 'Kavitha Nair',
-    companyName: 'Ergonomic Workspaces',
-    businessType: 'distributor',
-    email: 'kavitha@ergospaces.in',
-    phone: '+91-9846789012',
-    alternatePhone: '',
-    website: 'https://ergospaces.in',
-    contactPerson: 'Kavitha Nair',
-    address: '14, Marine Drive',
-    city: 'Kochi',
-    state: 'Kerala',
-    country: 'India',
-    pincode: '682001',
-    gstNumber: '32AABCE9012J1Z7',
-    panNumber: 'AABCE9012J',
-    paymentTerms: 'net_30',
-    creditLimit: 400000,
-    rating: 4.6,
-    notes: 'Ergonomic office furniture specialist. Excellent post-sales support.',
-    bankDetails: {
-      bankName: 'Federal Bank',
-      accountNumber: '15070200012345',
-      ifscCode: 'FDRL0001234',
-      branchName: 'Marine Drive Branch',
-    },
-  },
-  {
-    name: 'Deepak Malhotra',
-    companyName: 'Industrial Supply Co.',
-    businessType: 'wholesaler',
-    email: 'deepak@indsupply.in',
-    phone: '+91-9812345678',
-    alternatePhone: '+91-9812345679',
-    website: 'https://indsupply.in',
-    contactPerson: 'Deepak Malhotra',
-    address: '67, Ludhiana Industrial Area',
-    city: 'Ludhiana',
-    state: 'Punjab',
-    country: 'India',
-    pincode: '141003',
-    gstNumber: '03AABCI3456K1Z2',
-    panNumber: 'AABCI3456K',
-    paymentTerms: 'net_60',
-    creditLimit: 600000,
-    rating: 4.1,
-    notes: 'Heavy industrial equipment. Specialized logistics for large orders.',
-    bankDetails: {
-      bankName: 'Canara Bank',
-      accountNumber: '3456789012345',
-      ifscCode: 'CNRB0001234',
-      branchName: 'Industrial Area Branch',
-    },
-  },
-  {
-    name: 'Sunita Joshi',
-    companyName: 'EcoPack Innovations',
-    businessType: 'manufacturer',
-    email: 'sunita@ecopack.in',
-    phone: '+91-9099876543',
-    alternatePhone: '',
-    website: 'https://ecopack.in',
-    contactPerson: 'Sunita Joshi',
-    address: '22, Pimpri Industrial Area',
-    city: 'Pune',
-    state: 'Maharashtra',
-    country: 'India',
-    pincode: '411018',
-    gstNumber: '27AABCE7890L1Z6',
-    panNumber: 'AABCE7890L',
-    paymentTerms: 'net_30',
-    creditLimit: 250000,
-    rating: 4.4,
-    notes: 'Eco-friendly packaging. ISO 14001 certified. Good for sustainability reports.',
-    bankDetails: {
-      bankName: 'Bank of Maharashtra',
-      accountNumber: '60101234567',
-      ifscCode: 'MAHB0001234',
-      branchName: 'Pimpri Branch',
-    },
-  },
-];
-
-// Products will be defined after categories/suppliers are resolved
-const buildProducts = (categoryMap, supplierMap) => [
-  {
-    name: 'Dell Inspiron 15 Laptop',
-    sku: 'ELEC-LAPTOP-001',
-    barcode: '8901234567890',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Tech Vision Pvt Ltd'],
-    brand: 'Dell',
-    description: '15.6-inch FHD laptop with Intel i5 12th Gen, 8GB RAM, 512GB SSD, Windows 11',
-    price: 55000,
-    sellingPrice: 55000,
-    costPrice: 47000,
-    purchasePrice: 47000,
-    quantity: 45,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 200,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-101',
-  },
-  {
-    name: 'HP LaserJet Pro Printer',
-    sku: 'ELEC-PRINT-002',
-    barcode: '8901234567891',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Tech Vision Pvt Ltd'],
-    brand: 'HP',
-    description: 'Monochrome laser printer, 30 ppm, Wi-Fi, duplex printing, USB 2.0',
-    price: 18500,
-    sellingPrice: 18500,
-    costPrice: 15000,
-    purchasePrice: 15000,
-    quantity: 8,
-    reorderLevel: 5,
-    minimumStock: 3,
-    maximumStock: 50,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-102',
-  },
-  {
-    name: 'Samsung 24" Monitor',
-    sku: 'ELEC-MON-003',
-    barcode: '8901234567892',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Digital Components Hub'],
-    brand: 'Samsung',
-    description: '24-inch IPS Full HD monitor, 75Hz refresh rate, AMD FreeSync, HDMI, VGA',
-    price: 14000,
-    sellingPrice: 14000,
-    costPrice: 11500,
-    purchasePrice: 11500,
-    quantity: 3,
-    reorderLevel: 5,
-    minimumStock: 3,
-    maximumStock: 100,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-103',
-  },
-  {
-    name: 'Logitech MX Master 3 Mouse',
-    sku: 'ELEC-MOUSE-004',
-    barcode: '8901234567893',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Digital Components Hub'],
-    brand: 'Logitech',
-    description: 'Advanced wireless mouse with MagSpeed scroll, Bluetooth, 7 buttons, 4000 DPI',
-    price: 9500,
-    sellingPrice: 9500,
-    costPrice: 7500,
-    purchasePrice: 7500,
-    quantity: 0,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 150,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-104',
-  },
-  {
-    name: 'A4 Copier Paper 500 Sheets',
-    sku: 'OFF-PAPER-001',
-    barcode: '8901234567894',
-    category: categoryMap['Office Supplies'],
-    supplier: supplierMap['Office World Distributors'],
-    brand: 'JK Copier',
-    description: 'A4 size 75 GSM copier paper, 500 sheets per ream, pH neutral, acid-free',
-    price: 350,
-    sellingPrice: 350,
-    costPrice: 250,
-    purchasePrice: 250,
-    quantity: 500,
-    reorderLevel: 50,
-    minimumStock: 20,
-    maximumStock: 2000,
-    unit: 'ream',
-    status: 'active',
-    warehouseLocation: 'B-201',
-  },
-  {
-    name: 'Ballpoint Pen Box (50 pcs)',
-    sku: 'OFF-PEN-002',
-    barcode: '8901234567895',
-    category: categoryMap['Office Supplies'],
-    supplier: supplierMap['Stationery Plus'],
-    brand: 'Cello',
-    description: 'Blue ballpoint pens, medium point, smooth writing, 50 pieces per box',
-    price: 120,
-    sellingPrice: 120,
-    costPrice: 80,
-    purchasePrice: 80,
-    quantity: 200,
-    reorderLevel: 30,
-    minimumStock: 10,
-    maximumStock: 500,
-    unit: 'box',
-    status: 'active',
-    warehouseLocation: 'B-202',
-  },
-  {
-    name: 'Sticky Notes 3x3 (12 Pads)',
-    sku: 'OFF-STICKY-003',
-    barcode: '8901234567896',
-    category: categoryMap['Office Supplies'],
-    supplier: supplierMap['Stationery Plus'],
-    brand: '3M Post-It',
-    description: 'Repositionable adhesive sticky notes, 3x3 inches, 100 sheets/pad, assorted colors, 12 pads',
-    price: 480,
-    sellingPrice: 480,
-    costPrice: 340,
-    purchasePrice: 340,
-    quantity: 7,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 100,
-    unit: 'pack',
-    status: 'active',
-    warehouseLocation: 'B-203',
-  },
-  {
-    name: 'Office Desk - Executive Series',
-    sku: 'FURN-DESK-001',
-    barcode: '8901234567897',
-    category: categoryMap['Furniture'],
-    supplier: supplierMap['Furniture Craft Industries'],
-    brand: 'Godrej Interio',
-    description: 'L-shaped executive office desk, engineered wood, cable management, 180x120cm',
-    price: 28000,
-    sellingPrice: 28000,
-    costPrice: 21000,
-    purchasePrice: 21000,
-    quantity: 15,
-    reorderLevel: 3,
-    minimumStock: 2,
-    maximumStock: 30,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'C-301',
-  },
-  {
-    name: 'Ergonomic Office Chair',
-    sku: 'FURN-CHAIR-002',
-    barcode: '8901234567898',
-    category: categoryMap['Furniture'],
-    supplier: supplierMap['Ergonomic Workspaces'],
-    brand: 'Herman Miller',
-    description: 'High-back ergonomic chair with lumbar support, adjustable armrests, breathable mesh back',
-    price: 35000,
-    sellingPrice: 35000,
-    costPrice: 27000,
-    purchasePrice: 27000,
-    quantity: 20,
-    reorderLevel: 5,
-    minimumStock: 3,
-    maximumStock: 50,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'C-302',
-  },
-  {
-    name: 'Steel Filing Cabinet 4-Drawer',
-    sku: 'FURN-CAB-003',
-    barcode: '8901234567899',
-    category: categoryMap['Furniture'],
-    supplier: supplierMap['Furniture Craft Industries'],
-    brand: 'Storex',
-    description: '4-drawer vertical steel filing cabinet, legal/letter size, anti-tip mechanism, lock',
-    price: 12500,
-    sellingPrice: 12500,
-    costPrice: 9500,
-    purchasePrice: 9500,
-    quantity: 0,
-    reorderLevel: 3,
-    minimumStock: 2,
-    maximumStock: 20,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'C-303',
-  },
-  {
-    name: 'Bosch GSB 500W Power Drill',
-    sku: 'TOOL-DRILL-001',
-    barcode: '8901234567900',
-    category: categoryMap['Industrial Tools'],
-    supplier: supplierMap['Power Tools India'],
-    brand: 'Bosch',
-    description: '500W electric drill with keyless chuck, 2 speed settings, 13mm chuck, includes bits set',
-    price: 3200,
-    sellingPrice: 3200,
-    costPrice: 2400,
-    purchasePrice: 2400,
-    quantity: 35,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 100,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'D-401',
-  },
-  {
-    name: 'Makita Angle Grinder 4.5"',
-    sku: 'TOOL-GRIND-002',
-    barcode: '8901234567901',
-    category: categoryMap['Industrial Tools'],
-    supplier: supplierMap['Industrial Supply Co.'],
-    brand: 'Makita',
-    description: '4.5-inch angle grinder, 840W motor, 11000 RPM, 115mm disc, safety guard included',
-    price: 4800,
-    sellingPrice: 4800,
-    costPrice: 3600,
-    purchasePrice: 3600,
-    quantity: 4,
-    reorderLevel: 5,
-    minimumStock: 3,
-    maximumStock: 50,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'D-402',
-  },
-  {
-    name: 'Stanley Hand Tool Set (25 pcs)',
-    sku: 'TOOL-SET-003',
-    barcode: '8901234567902',
-    category: categoryMap['Industrial Tools'],
-    supplier: supplierMap['Power Tools India'],
-    brand: 'Stanley',
-    description: 'Complete 25-piece hand tool set: hammer, screwdrivers, pliers, tape measure, in blow-mould case',
-    price: 2200,
-    sellingPrice: 2200,
-    costPrice: 1600,
-    purchasePrice: 1600,
-    quantity: 50,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 200,
-    unit: 'set',
-    status: 'active',
-    warehouseLocation: 'D-403',
-  },
-  {
-    name: 'Corrugated Shipping Box 12x9x6"',
-    sku: 'PACK-BOX-001',
-    barcode: '8901234567903',
-    category: categoryMap['Packaging Materials'],
-    supplier: supplierMap['PackSmart Solutions'],
-    brand: 'PackSmart',
-    description: 'Single-wall corrugated cardboard box 12x9x6 inches, 32 ECT strength, pack of 25',
-    price: 650,
-    sellingPrice: 650,
-    costPrice: 450,
-    purchasePrice: 450,
-    quantity: 300,
-    reorderLevel: 50,
-    minimumStock: 25,
-    maximumStock: 1000,
-    unit: 'pack',
-    status: 'active',
-    warehouseLocation: 'E-501',
-  },
-  {
-    name: 'Bubble Wrap Roll 50m',
-    sku: 'PACK-BUBBLE-002',
-    barcode: '8901234567904',
-    category: categoryMap['Packaging Materials'],
-    supplier: supplierMap['EcoPack Innovations'],
-    brand: 'EcoPack',
-    description: 'Small bubble wrap roll 50m x 50cm, 10mm bubble height, recyclable material',
-    price: 850,
-    sellingPrice: 850,
-    costPrice: 600,
-    purchasePrice: 600,
-    quantity: 120,
-    reorderLevel: 20,
-    minimumStock: 10,
-    maximumStock: 500,
-    unit: 'roll',
-    status: 'active',
-    warehouseLocation: 'E-502',
-  },
-  {
-    name: 'Brown Packing Tape 48mm x 100m',
-    sku: 'PACK-TAPE-003',
-    barcode: '8901234567905',
-    category: categoryMap['Packaging Materials'],
-    supplier: supplierMap['PackSmart Solutions'],
-    brand: 'Tesa',
-    description: 'Strong adhesive brown packing tape, 48mm width, 100m length, box of 6 rolls',
-    price: 360,
-    sellingPrice: 360,
-    costPrice: 240,
-    purchasePrice: 240,
-    quantity: 2,
-    reorderLevel: 10,
-    minimumStock: 5,
-    maximumStock: 200,
-    unit: 'box',
-    status: 'active',
-    warehouseLocation: 'E-503',
-  },
-  {
-    name: 'USB-C Hub 7-in-1',
-    sku: 'ELEC-HUB-005',
-    barcode: '8901234567906',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Digital Components Hub'],
-    brand: 'Anker',
-    description: '7-in-1 USB-C hub with 4K HDMI, 3x USB-A, SD card reader, PD charging 100W',
-    price: 3500,
-    sellingPrice: 3500,
-    costPrice: 2700,
-    purchasePrice: 2700,
-    quantity: 60,
-    reorderLevel: 15,
-    minimumStock: 10,
-    maximumStock: 200,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-105',
-  },
-  {
-    name: 'Mechanical Keyboard - TKL',
-    sku: 'ELEC-KBD-006',
-    barcode: '8901234567907',
-    category: categoryMap['Electronics'],
-    supplier: supplierMap['Tech Vision Pvt Ltd'],
-    brand: 'Keychron',
-    description: 'TKL mechanical keyboard with Cherry MX Brown switches, RGB backlit, wireless/wired',
-    price: 7800,
-    sellingPrice: 7800,
-    costPrice: 6000,
-    purchasePrice: 6000,
-    quantity: 25,
-    reorderLevel: 8,
-    minimumStock: 5,
-    maximumStock: 100,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'A-106',
-  },
-  {
-    name: 'Whiteboard 4x3 Feet',
-    sku: 'OFF-WB-004',
-    barcode: '8901234567908',
-    category: categoryMap['Office Supplies'],
-    supplier: supplierMap['Office World Distributors'],
-    brand: 'Quartet',
-    description: 'Magnetic dry-erase whiteboard 4x3 feet, aluminium frame, includes markers and eraser',
-    price: 4200,
-    sellingPrice: 4200,
-    costPrice: 3100,
-    purchasePrice: 3100,
-    quantity: 12,
-    reorderLevel: 3,
-    minimumStock: 2,
-    maximumStock: 30,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'B-204',
-  },
-  {
-    name: 'Wooden Bookshelf 5-Tier',
-    sku: 'FURN-SHELF-004',
-    barcode: '8901234567909',
-    category: categoryMap['Furniture'],
-    supplier: supplierMap['Ergonomic Workspaces'],
-    brand: 'HomePro',
-    description: '5-tier open bookshelf, engineered wood, walnut finish, 180x80x25cm, adjustable shelves',
-    price: 8500,
-    sellingPrice: 8500,
-    costPrice: 6200,
-    purchasePrice: 6200,
-    quantity: 18,
-    reorderLevel: 3,
-    minimumStock: 2,
-    maximumStock: 40,
-    unit: 'piece',
-    status: 'active',
-    warehouseLocation: 'C-304',
-  },
-];
-
-const CUSTOMERS_DATA = [
-  {
-    name: 'Arjun Mehta',
-    companyName: 'Mehta Enterprises',
-    customerType: 'wholesale',
-    email: 'arjun@mehta-ent.in',
-    phone: '+91-9876501234',
-    alternatePhone: '+91-9876501235',
-    website: 'https://mehta-ent.in',
-    address: '45, Nehru Road, Santacruz West',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    country: 'India',
-    pincode: '400054',
-    gstNumber: '27AAACM1234A1Z5',
-    panNumber: 'AAACM1234A',
-    creditLimit: 200000,
-    creditPeriod: 30,
-    loyaltyPoints: 1500,
-    notes: 'Long-term wholesale customer. Prefers bulk shipments.',
-  },
-  {
-    name: 'Sneha Iyer',
-    companyName: '',
-    customerType: 'retail',
-    email: 'sneha.iyer@gmail.com',
-    phone: '+91-9844556677',
-    alternatePhone: '',
-    website: '',
-    address: '12, Brigade Road',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    country: 'India',
-    pincode: '560001',
-    gstNumber: '',
-    panNumber: 'BBACI5678B',
-    creditLimit: 25000,
-    creditPeriod: 0,
-    loyaltyPoints: 350,
-    notes: 'Regular retail customer. Prefers online payments.',
-  },
-  {
-    name: 'Ramesh Gupta',
-    companyName: 'Gupta Office Solutions',
-    customerType: 'distributor',
-    email: 'ramesh@guptaoffice.in',
-    phone: '+91-9312345678',
-    alternatePhone: '+91-9312345679',
-    website: 'https://guptaoffice.in',
-    address: '89, Connaught Place',
-    city: 'New Delhi',
-    state: 'Delhi',
-    country: 'India',
-    pincode: '110001',
-    gstNumber: '07AAACG9012C1Z2',
-    panNumber: 'AAACG9012C',
-    creditLimit: 500000,
-    creditPeriod: 45,
-    loyaltyPoints: 4200,
-    notes: 'Major distributor for Delhi-NCR region. Negotiated rate -5%.',
-  },
-  {
-    name: 'Pooja Verma',
-    companyName: 'Verma Tech Solutions',
-    customerType: 'corporate',
-    email: 'pooja@vermatech.in',
-    phone: '+91-9921234567',
-    alternatePhone: '',
-    website: 'https://vermatech.in',
-    address: '56, Hitech City, Madhapur',
-    city: 'Hyderabad',
-    state: 'Telangana',
-    country: 'India',
-    pincode: '500081',
-    gstNumber: '36AAACV3456D1Z8',
-    panNumber: 'AAACV3456D',
-    creditLimit: 300000,
-    creditPeriod: 30,
-    loyaltyPoints: 2800,
-    notes: 'IT company bulk buyer. Monthly purchase orders.',
-  },
-  {
-    name: 'Kiran Rao',
-    companyName: '',
-    customerType: 'vip',
-    email: 'kiran.rao@outlook.com',
-    phone: '+91-9845678901',
-    alternatePhone: '+91-9845678902',
-    website: '',
-    address: '7, MG Road',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    country: 'India',
-    pincode: '560009',
-    gstNumber: '',
-    panNumber: 'CCACK7890E',
-    creditLimit: 100000,
-    creditPeriod: 15,
-    loyaltyPoints: 8500,
-    notes: 'VIP customer. Always request priority delivery.',
-  },
-  {
-    name: 'Sanjay Kapoor',
-    companyName: 'Kapoor Industries Ltd',
-    customerType: 'wholesale',
-    email: 'sanjay@kapoor-ind.com',
-    phone: '+91-9873456789',
-    alternatePhone: '+91-9873456790',
-    website: 'https://kapoor-ind.com',
-    address: '23, Industrial Area, Phase I',
-    city: 'Chandigarh',
-    state: 'Punjab',
-    country: 'India',
-    pincode: '160002',
-    gstNumber: '03AAACK1234F1Z5',
-    panNumber: 'AAACK1234F',
-    creditLimit: 800000,
-    creditPeriod: 60,
-    loyaltyPoints: 6700,
-    notes: 'Large wholesale buyer. Quarterly contracts in place.',
-  },
-  {
-    name: 'Divya Pillai',
-    companyName: 'Pillai Educational Trust',
-    customerType: 'corporate',
-    email: 'divya@pillaiedu.org',
-    phone: '+91-9809876543',
-    alternatePhone: '',
-    website: 'https://pillaiedu.org',
-    address: '34, Museum Road',
-    city: 'Kochi',
-    state: 'Kerala',
-    country: 'India',
-    pincode: '682016',
-    gstNumber: '32AAADP5678G1Z1',
-    panNumber: 'AAADP5678G',
-    creditLimit: 150000,
-    creditPeriod: 30,
-    loyaltyPoints: 1200,
-    notes: 'Educational institution. Tax-exempt purchases. Needs formal PO.',
-  },
-  {
-    name: 'Manoj Tiwari',
-    companyName: '',
-    customerType: 'retail',
-    email: 'manoj.tiwari@yahoo.in',
-    phone: '+91-9765432109',
-    alternatePhone: '',
-    website: '',
-    address: '78, Hazratganj',
-    city: 'Lucknow',
-    state: 'Uttar Pradesh',
-    country: 'India',
-    pincode: '226001',
-    gstNumber: '',
-    panNumber: 'DDDMT3456H',
-    creditLimit: 10000,
-    creditPeriod: 0,
-    loyaltyPoints: 180,
-    notes: '',
-  },
-  {
-    name: 'Geeta Reddy',
-    companyName: 'Reddy Constructions',
-    customerType: 'wholesale',
-    email: 'geeta@reddycons.in',
-    phone: '+91-9948765432',
-    alternatePhone: '+91-9948765433',
-    website: '',
-    address: '12, Banjara Hills Road No. 3',
-    city: 'Hyderabad',
-    state: 'Telangana',
-    country: 'India',
-    pincode: '500034',
-    gstNumber: '36AAACR7890I1Z4',
-    panNumber: 'AAACR7890I',
-    creditLimit: 400000,
-    creditPeriod: 45,
-    loyaltyPoints: 3100,
-    notes: 'Construction company. Regular buyer of industrial tools and packaging.',
-  },
-  {
-    name: 'Anil Desai',
-    companyName: 'Desai Retail Chain',
-    customerType: 'distributor',
-    email: 'anil@desairetail.in',
-    phone: '+91-9922334455',
-    alternatePhone: '',
-    website: 'https://desairetail.in',
-    address: '5, FC Road',
-    city: 'Pune',
-    state: 'Maharashtra',
-    country: 'India',
-    pincode: '411016',
-    gstNumber: '27AAACD3456J1Z3',
-    panNumber: 'AAACD3456J',
-    creditLimit: 600000,
-    creditPeriod: 60,
-    loyaltyPoints: 5500,
-    notes: 'Retail chain with 12 outlets. Weekly bulk orders.',
-  },
-  {
-    name: 'Lakshmi Narayan',
-    companyName: 'Narayan Pharma',
-    customerType: 'corporate',
-    email: 'lakshmi@narayanpharma.com',
-    phone: '+91-9800111222',
-    alternatePhone: '+91-9800111223',
-    website: 'https://narayanpharma.com',
-    address: '45, Pharmaceutical Zone, Jeedimetla',
-    city: 'Hyderabad',
-    state: 'Telangana',
-    country: 'India',
-    pincode: '500055',
-    gstNumber: '36AAACN9012K1Z9',
-    panNumber: 'AAACN9012K',
-    creditLimit: 250000,
-    creditPeriod: 30,
-    loyaltyPoints: 2300,
-    notes: 'Pharmaceutical company. Strict compliance requirements for packaging.',
-  },
-  {
-    name: 'Vivek Sharma',
-    companyName: '',
-    customerType: 'retail',
-    email: 'vivek.sharma1985@gmail.com',
-    phone: '+91-9711223344',
-    alternatePhone: '',
-    website: '',
-    address: '123, Rohini Sector 7',
-    city: 'New Delhi',
-    state: 'Delhi',
-    country: 'India',
-    pincode: '110085',
-    gstNumber: '',
-    panNumber: 'EEFVS4567L',
-    creditLimit: 15000,
-    creditPeriod: 0,
-    loyaltyPoints: 750,
-    notes: 'Online channel customer.',
-  },
-  {
-    name: 'Rekha Jain',
-    companyName: 'Jain Traders',
-    customerType: 'wholesale',
-    email: 'rekha@jaintraders.in',
-    phone: '+91-9831234567',
-    alternatePhone: '',
-    website: '',
-    address: '67, Burra Bazar',
-    city: 'Kolkata',
-    state: 'West Bengal',
-    country: 'India',
-    pincode: '700007',
-    gstNumber: '19AAACJ7890M1Z6',
-    panNumber: 'AAACJ7890M',
-    creditLimit: 350000,
-    creditPeriod: 30,
-    loyaltyPoints: 4800,
-    notes: 'East India region wholesale distributor.',
-  },
-  {
-    name: 'Harish Babu',
-    companyName: 'Babu Hotels Group',
-    customerType: 'corporate',
-    email: 'harish@babuhotels.in',
-    phone: '+91-9944112233',
-    alternatePhone: '+91-9944112234',
-    website: 'https://babuhotels.in',
-    address: '8, Beach Road, T.T.K. Road',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    country: 'India',
-    pincode: '600018',
-    gstNumber: '33AAACB5678N1Z2',
-    panNumber: 'AAACB5678N',
-    creditLimit: 700000,
-    creditPeriod: 45,
-    loyaltyPoints: 9200,
-    notes: 'Hospitality group. Large recurring orders for office supplies and furniture.',
-  },
-  {
-    name: 'Nandini Kulkarni',
-    companyName: 'Kulkarni StartUp Hub',
-    customerType: 'vip',
-    email: 'nandini@kshub.in',
-    phone: '+91-9845000111',
-    alternatePhone: '',
-    website: 'https://kshub.in',
-    address: '9, Koregaon Park',
-    city: 'Pune',
-    state: 'Maharashtra',
-    country: 'India',
-    pincode: '411001',
-    gstNumber: '27AAACK3456O1Z7',
-    panNumber: 'AAACK3456O',
-    creditLimit: 500000,
-    creditPeriod: 30,
-    loyaltyPoints: 11500,
-    notes: 'Co-working space. Furnishes new client spaces regularly. VIP priority.',
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SEED FUNCTION
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function seed() {
+const seed = async () => {
   try {
-    console.log('\n🔄 Connecting to MongoDB...');
+    console.log('🔄 Connecting to MongoDB...');
     await mongoose.connect(MONGO_URI);
-    console.log(`✅ Connected to: ${mongoose.connection.name}\n`);
+    console.log('✅ Connected to MongoDB');
 
-    // ── 1. Seed Categories ────────────────────────────────────────────────────
+    // 1. Get Admin User
+    const adminUser = await User.findOne({ role: ROLE_IDS.ADMIN }) || await User.findOne();
+    if (!adminUser) {
+      console.warn('⚠️ No users found in database. Run a script to create an admin first, or data will lack a creator.');
+    }
+    const adminId = adminUser ? adminUser._id : new mongoose.Types.ObjectId();
+
+    // 2. Branches
+    console.log('📂 Seeding Branches...');
+    const branches = [
+      { name: 'Main Branch', city: 'Tadepalligudem', state: 'Andhra Pradesh', address: '123 Main St' },
+      { name: 'City Branch', city: 'Vijayawada', state: 'Andhra Pradesh', address: '456 City Center' }
+    ];
+    const branchMap = {};
+    for (const b of branches) {
+      const branch = await Branch.findOneAndUpdate({ name: b.name }, { $set: b }, { upsert: true, new: true, setDefaultsOnInsert: true });
+      branchMap[b.name] = branch._id;
+    }
+    const mainBranchId = branchMap['Main Branch'];
+
+    // 3. Categories
     console.log('📂 Seeding Categories...');
+    const catData = [
+      'Laptops', 'Mobile Phones', 'Computer Accessories', 'Monitors', 'Printers',
+      'Networking', 'Storage Devices', 'Keyboards & Mice', 'Audio Devices', 'Cables & Adapters'
+    ];
     const categoryMap = {};
-    for (const catData of CATEGORIES_DATA) {
+    for (let i = 0; i < catData.length; i++) {
+      const name = catData[i];
       const category = await Category.findOneAndUpdate(
-        { name: catData.name },
-        { $set: { ...catData, isActive: true } },
+        { name },
+        { $set: { description: `${name} related items`, isActive: true, sortOrder: i+1 } },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      categoryMap[catData.name] = category._id;
-      console.log(`   ✔ ${catData.name} (${category._id})`);
+      categoryMap[name] = category._id;
     }
 
-    // ── 2. Seed Suppliers ─────────────────────────────────────────────────────
-    console.log('\n🏭 Seeding Suppliers...');
+    // 4. Suppliers
+    console.log('🏭 Seeding Suppliers...');
+    const supData = [
+      { companyName: 'TechSource Distributors', name: 'Ravi Kumar', email: 'contact@techsource.in', phone: '9876543210' },
+      { companyName: 'Prime IT Solutions', name: 'Amit Singh', email: 'sales@primeit.in', phone: '9876543211' },
+      { companyName: 'Digital World Suppliers', name: 'Neha Sharma', email: 'info@digitalworld.in', phone: '9876543212' },
+      { companyName: 'Andhra Computer Mart', name: 'Srinivas Rao', email: 'orders@andhramart.in', phone: '9876543213' },
+      { companyName: 'SmartTech Wholesale', name: 'Pooja Verma', email: 'wholesale@smarttech.in', phone: '9876543214' },
+      { companyName: 'Vertex Electronics', name: 'Vikram Reddy', email: 'contact@vertex.in', phone: '9876543215' },
+      { companyName: 'NextGen Systems', name: 'Anil Desai', email: 'sales@nextgen.in', phone: '9876543216' },
+      { companyName: 'Reliable IT Distributors', name: 'Sunita Joshi', email: 'info@reliableit.in', phone: '9876543217' }
+    ];
     const supplierMap = {};
-    for (const supData of SUPPLIERS_DATA) {
-      const { gstNumber, ...rest } = supData;
-      const upsertData = { ...rest, isActive: true };
-      if (gstNumber) upsertData.gstNumber = gstNumber;
-
+    for (const s of supData) {
       const supplier = await Supplier.findOneAndUpdate(
-        { email: supData.email },
-        { $set: upsertData },
+        { email: s.email },
+        { $set: { ...s, address: 'Industrial Area', city: 'Hyderabad', state: 'Telangana', country: 'India', isActive: true } },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      supplierMap[supData.companyName] = supplier._id;
-      console.log(`   ✔ ${supData.companyName} — ${supData.email}`);
+      supplierMap[s.companyName] = supplier._id;
     }
 
-    // ── 3. Seed Products ──────────────────────────────────────────────────────
-    console.log('\n📦 Seeding Products...');
-    const productsData = buildProducts(categoryMap, supplierMap);
-    for (const prodData of productsData) {
-      await Product.findOneAndUpdate(
-        { sku: prodData.sku },
-        { $set: { ...prodData, isActive: true } },
+    // 5. Products
+    console.log('📦 Seeding Products...');
+    const productList = [
+      // Laptops
+      { name: 'Dell Inspiron 15', sku: 'LAP-DELL-001', cat: 'Laptops', sup: 'TechSource Distributors', pp: 48000, sp: 55000, qty: 40, min: 10 },
+      { name: 'HP 15s', sku: 'LAP-HP-002', cat: 'Laptops', sup: 'Prime IT Solutions', pp: 42000, sp: 49000, qty: 15, min: 10 }, // Medium
+      { name: 'Lenovo IdeaPad Slim 3', sku: 'LAP-LEN-003', cat: 'Laptops', sup: 'Digital World Suppliers', pp: 35000, sp: 42000, qty: 5, min: 10 }, // Low
+      { name: 'ASUS VivoBook 15', sku: 'LAP-ASUS-004', cat: 'Laptops', sup: 'Andhra Computer Mart', pp: 40000, sp: 47000, qty: 0, min: 5 }, // Out
+      { name: 'Acer Aspire 5', sku: 'LAP-ACER-005', cat: 'Laptops', sup: 'SmartTech Wholesale', pp: 38000, sp: 45000, qty: 25, min: 10 },
+      
+      // Mobile Phones
+      { name: 'Samsung Galaxy A15', sku: 'MOB-SAM-001', cat: 'Mobile Phones', sup: 'Vertex Electronics', pp: 15000, sp: 18000, qty: 50, min: 15 },
+      { name: 'Redmi Note 13', sku: 'MOB-RED-002', cat: 'Mobile Phones', sup: 'NextGen Systems', pp: 14000, sp: 17000, qty: 12, min: 15 }, // Low
+      { name: 'Realme 12', sku: 'MOB-REAL-003', cat: 'Mobile Phones', sup: 'Reliable IT Distributors', pp: 16000, sp: 19500, qty: 30, min: 10 },
+      { name: 'OnePlus Nord CE', sku: 'MOB-ONE-004', cat: 'Mobile Phones', sup: 'TechSource Distributors', pp: 22000, sp: 25000, qty: 0, min: 10 }, // Out
+      { name: 'Motorola G54', sku: 'MOB-MOT-005', cat: 'Mobile Phones', sup: 'Prime IT Solutions', pp: 13000, sp: 16000, qty: 22, min: 10 },
+
+      // Monitors
+      { name: 'Dell 24-inch Monitor', sku: 'MON-DELL-001', cat: 'Monitors', sup: 'Digital World Suppliers', pp: 9000, sp: 11000, qty: 18, min: 5 },
+      { name: 'LG 24-inch IPS Monitor', sku: 'MON-LG-002', cat: 'Monitors', sup: 'Andhra Computer Mart', pp: 9500, sp: 11500, qty: 4, min: 10 }, // Low
+      { name: 'Samsung 27-inch Monitor', sku: 'MON-SAM-003', cat: 'Monitors', sup: 'SmartTech Wholesale', pp: 13000, sp: 16000, qty: 20, min: 5 },
+      { name: 'Acer 24-inch Monitor', sku: 'MON-ACER-004', cat: 'Monitors', sup: 'Vertex Electronics', pp: 8000, sp: 10000, qty: 0, min: 5 }, // Out
+
+      // Accessories
+      { name: 'Logitech Wireless Mouse', sku: 'ACC-LOG-001', cat: 'Keyboards & Mice', sup: 'NextGen Systems', pp: 600, sp: 900, qty: 100, min: 20 },
+      { name: 'HP Wireless Keyboard', sku: 'ACC-HP-002', cat: 'Keyboards & Mice', sup: 'Reliable IT Distributors', pp: 1200, sp: 1600, qty: 45, min: 15 },
+      { name: 'Dell USB Keyboard', sku: 'ACC-DELL-003', cat: 'Keyboards & Mice', sup: 'TechSource Distributors', pp: 500, sp: 750, qty: 15, min: 20 }, // Low
+      { name: 'Logitech MK270', sku: 'ACC-LOG-004', cat: 'Keyboards & Mice', sup: 'Prime IT Solutions', pp: 1500, sp: 2000, qty: 0, min: 10 }, // Out
+      { name: 'USB-C Hub', sku: 'ACC-HUB-005', cat: 'Cables & Adapters', sup: 'Digital World Suppliers', pp: 800, sp: 1200, qty: 35, min: 10 },
+      { name: 'HDMI Cable', sku: 'ACC-HDMI-006', cat: 'Cables & Adapters', sup: 'Andhra Computer Mart', pp: 150, sp: 300, qty: 150, min: 30 },
+      { name: 'Ethernet Cable', sku: 'ACC-ETH-007', cat: 'Cables & Adapters', sup: 'SmartTech Wholesale', pp: 100, sp: 200, qty: 200, min: 40 },
+
+      // Storage
+      { name: 'Samsung 500GB SSD', sku: 'STO-SAM-001', cat: 'Storage Devices', sup: 'Vertex Electronics', pp: 3500, sp: 4500, qty: 40, min: 10 },
+      { name: 'WD 1TB HDD', sku: 'STO-WD-002', cat: 'Storage Devices', sup: 'NextGen Systems', pp: 3000, sp: 4000, qty: 8, min: 10 }, // Low
+      { name: 'SanDisk 128GB USB Drive', sku: 'STO-SAN-003', cat: 'Storage Devices', sup: 'Reliable IT Distributors', pp: 800, sp: 1100, qty: 80, min: 20 },
+      { name: 'Kingston 256GB SSD', sku: 'STO-KIN-004', cat: 'Storage Devices', sup: 'TechSource Distributors', pp: 2200, sp: 3000, qty: 0, min: 5 }, // Out
+
+      // Networking
+      { name: 'TP-Link WiFi Router', sku: 'NET-TPL-001', cat: 'Networking', sup: 'Prime IT Solutions', pp: 1200, sp: 1800, qty: 3, min: 10 }, // Low
+      { name: 'D-Link Router', sku: 'NET-DL-002', cat: 'Networking', sup: 'Digital World Suppliers', pp: 1100, sp: 1700, qty: 25, min: 10 },
+      { name: 'TP-Link 8-Port Switch', sku: 'NET-TPL-003', cat: 'Networking', sup: 'Andhra Computer Mart', pp: 800, sp: 1200, qty: 0, min: 5 }, // Out
+      { name: 'D-Link 16-Port Switch', sku: 'NET-DL-004', cat: 'Networking', sup: 'SmartTech Wholesale', pp: 1500, sp: 2200, qty: 12, min: 5 },
+
+      // Printers
+      { name: 'HP LaserJet Printer', sku: 'PRI-HP-001', cat: 'Printers', sup: 'Vertex Electronics', pp: 12000, sp: 15000, qty: 15, min: 5 },
+      { name: 'Canon Inkjet Printer', sku: 'PRI-CAN-002', cat: 'Printers', sup: 'NextGen Systems', pp: 8000, sp: 10000, qty: 4, min: 5 }, // Low
+      { name: 'Epson EcoTank Printer', sku: 'PRI-EPS-003', cat: 'Printers', sup: 'Reliable IT Distributors', pp: 14000, sp: 17500, qty: 0, min: 3 }, // Out
+    ];
+
+    const prodMap = {};
+    for (const p of productList) {
+      const product = await Product.findOneAndUpdate(
+        { sku: p.sku },
+        { $set: {
+          name: p.name,
+          category: categoryMap[p.cat],
+          supplier: supplierMap[p.sup],
+          purchasePrice: p.pp,
+          sellingPrice: p.sp,
+          price: p.sp, // backward compat
+          costPrice: p.pp, // backward compat
+          quantity: p.qty,
+          minimumStock: p.min,
+          reorderLevel: p.min, // backward compat
+          unit: 'piece',
+          description: `High quality ${p.name}`,
+          isActive: true
+        }},
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      const stockLabel =
-        prodData.quantity === 0 ? '🔴 Out of Stock' :
-        prodData.quantity <= prodData.reorderLevel ? '🟡 Low Stock' : '🟢 In Stock';
-      console.log(`   ✔ ${prodData.name} (${prodData.sku}) — Qty: ${prodData.quantity} ${stockLabel}`);
+      prodMap[p.sku] = product;
     }
 
-    // ── 4. Seed Customers ─────────────────────────────────────────────────────
-    console.log('\n👥 Seeding Customers...');
-    for (const custData of CUSTOMERS_DATA) {
-      await Customer.findOneAndUpdate(
-        { email: custData.email },
-        { $set: { ...custData, isActive: true } },
+    // 6. Customers
+    console.log('👥 Seeding Customers...');
+    const custNames = [
+      'Rahul Verma', 'Sneha Reddy', 'Amit Patel', 'Neha Gupta', 'Vikram Singh',
+      'Pooja Sharma', 'Anil Kumar', 'Sunita Desai', 'Ravi Teja', 'Kavya Iyer',
+      'Suresh Babu', 'Divya Menon', 'Rajesh Khanna', 'Meera Nair', 'Vijay M',
+      'Swati Jain', 'Karthik S', 'Anjali P', 'Manoj T', 'Shruti R'
+    ];
+    const customerMap = {};
+    for (let i = 0; i < 25; i++) {
+      const name = custNames[i % custNames.length] + (i >= custNames.length ? ` ${i}` : '');
+      const email = `customer${i}@example.com`;
+      const customer = await Customer.findOneAndUpdate(
+        { email },
+        { $set: {
+          name,
+          email,
+          phone: `99887766${String(i).padStart(2, '0')}`,
+          address: 'Main Road',
+          city: 'Vijayawada',
+          state: 'Andhra Pradesh',
+          customerType: randomItem(['retail', 'wholesale', 'corporate']),
+          isActive: true
+        }},
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
-      console.log(`   ✔ ${custData.name} (${custData.customerType}) — ${custData.city}`);
+      customerMap[email] = customer._id;
+    }
+    const customerList = Object.values(customerMap);
+
+    // 7. Purchases
+    console.log('🛒 Seeding Purchases...');
+    const now = new Date();
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(now.getMonth() - 3);
+
+    const prods = Object.values(prodMap);
+    
+    // Clear old seeded purchases/sales/logs for a clean recent history slate
+    await Purchase.deleteMany({ notes: 'Seeded Data' });
+    await Sale.deleteMany({ notes: 'Seeded Data' });
+    
+    for (let i = 1; i <= 30; i++) {
+      const pCount = randomInt(1, 4);
+      const items = [];
+      let subtotal = 0;
+      const supplierId = randomItem(Object.values(supplierMap));
+      
+      for (let j = 0; j < pCount; j++) {
+        const prod = randomItem(prods);
+        const qty = randomInt(5, 50);
+        const st = qty * prod.purchasePrice;
+        items.push({
+          product: prod._id,
+          quantity: qty,
+          purchasePrice: prod.purchasePrice,
+          subtotal: st
+        });
+        subtotal += st;
+      }
+      
+      const purchaseDate = randomDate(threeMonthsAgo, now);
+      
+      const purchase = await Purchase.create({
+        purchaseNumber: `PUR-SEED-${i.toString().padStart(4, '0')}`,
+        supplier: supplierId,
+        items,
+        subtotal,
+        totalAmount: subtotal,
+        purchaseDate,
+        status: 'delivered',
+        paymentStatus: 'completed',
+        branch: mainBranchId,
+        createdBy: adminId,
+        notes: 'Seeded Data',
+        createdAt: purchaseDate
+      });
+
+      // Inventory Logs for Purchase
+      for (const item of items) {
+        await InventoryLog.create({
+          product: item.product,
+          user: adminId,
+          type: 'stock_in',
+          quantity: item.quantity,
+          previousStock: 0,
+          newStock: item.quantity,
+          referenceId: purchase._id,
+          referenceType: 'Purchase',
+          notes: 'Seeded Purchase',
+          createdAt: purchaseDate
+        });
+      }
     }
 
-    // ── Summary ───────────────────────────────────────────────────────────────
-    console.log('\n─────────────────────────────────────────────');
-    console.log('✅ Seed completed successfully!\n');
-    const catCount = await Category.countDocuments({ isActive: true });
-    const supCount = await Supplier.countDocuments({ isActive: true });
-    const prodCount = await Product.countDocuments({ isActive: true });
-    const custCount = await Customer.countDocuments({ isActive: true });
-    const lowStock = await Product.countDocuments({
-      isActive: true,
-      $expr: { $lte: ['$quantity', '$reorderLevel'] },
-      quantity: { $gt: 0 },
-    });
-    const outOfStock = await Product.countDocuments({ isActive: true, quantity: 0 });
+    // 8. Sales
+    console.log('📈 Seeding Sales...');
+    for (let i = 1; i <= 40; i++) {
+      const sCount = randomInt(1, 3);
+      const items = [];
+      let subtotal = 0;
+      const customerId = randomItem(customerList);
+      
+      for (let j = 0; j < sCount; j++) {
+        const prod = randomItem(prods);
+        const qty = randomInt(1, 5);
+        const st = qty * prod.sellingPrice;
+        items.push({
+          product: prod._id,
+          quantity: qty,
+          price: prod.sellingPrice,
+          subtotal: st
+        });
+        subtotal += st;
+      }
+      
+      const saleDate = randomDate(threeMonthsAgo, now);
+      
+      const sale = await Sale.create({
+        saleNumber: `INV-SEED-${i.toString().padStart(4, '0')}`,
+        customer: customerId,
+        items,
+        subtotal,
+        totalAmount: subtotal,
+        paymentMethod: randomItem(['cash', 'card', 'upi']),
+        paymentStatus: 'completed',
+        branch: mainBranchId,
+        createdBy: adminId,
+        notes: 'Seeded Data',
+        createdAt: saleDate
+      });
 
-    console.log(`📂 Categories: ${catCount}`);
-    console.log(`🏭 Suppliers:  ${supCount}`);
-    console.log(`📦 Products:   ${prodCount}  (🟡 Low: ${lowStock}  |  🔴 Out: ${outOfStock})`);
-    console.log(`👥 Customers:  ${custCount}`);
-    console.log('─────────────────────────────────────────────\n');
+      // Inventory Logs for Sale
+      for (const item of items) {
+        await InventoryLog.create({
+          product: item.product,
+          user: adminId,
+          type: 'stock_out',
+          quantity: item.quantity,
+          previousStock: item.quantity + 5, // Just mock values
+          newStock: 5,
+          referenceId: sale._id,
+          referenceType: 'Sale',
+          notes: 'Seeded Sale',
+          createdAt: saleDate
+        });
+      }
+    }
+
+    // 9. Activity Logs
+    console.log('📝 Seeding Activity Logs...');
+    await ActivityLog.deleteMany({ browser: 'Seeder' });
+    
+    for (let i = 0; i < 20; i++) {
+      const actionDate = randomDate(threeMonthsAgo, now);
+      const modules = ['products', 'suppliers', 'customers', 'sales', 'purchases'];
+      const actions = ['Created', 'Updated', 'Viewed', 'Deleted'];
+      
+      await ActivityLog.create({
+        user: adminId,
+        action: `${randomItem(actions)} a record`,
+        module: randomItem(modules),
+        ipAddress: '127.0.0.1',
+        device: 'Desktop',
+        browser: 'Seeder',
+        status: 'success',
+        createdAt: actionDate
+      });
+    }
+
+    console.log('✅ Seeding completed successfully!');
+    
+    // Reports
+    const catCount = await Category.countDocuments();
+    const supCount = await Supplier.countDocuments();
+    const prodCount = await Product.countDocuments();
+    const custCount = await Customer.countDocuments();
+    const purCount = await Purchase.countDocuments({ notes: 'Seeded Data' });
+    const saleCount = await Sale.countDocuments({ notes: 'Seeded Data' });
+    
+    console.log('\n--- Seed Summary ---');
+    console.log(`Categories: ${catCount}`);
+    console.log(`Suppliers: ${supCount}`);
+    console.log(`Products: ${prodCount}`);
+    console.log(`Customers: ${custCount}`);
+    console.log(`Purchases: ${purCount}`);
+    console.log(`Sales: ${saleCount}`);
+
   } catch (err) {
-    console.error('\n❌ Seed error:', err.message);
-    if (err.stack) console.error(err.stack);
-    process.exit(1);
+    console.error('❌ Seeding failed:', err);
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 MongoDB disconnected.\n');
+    console.log('🔌 MongoDB disconnected');
   }
-}
+};
 
 seed();

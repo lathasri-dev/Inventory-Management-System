@@ -28,7 +28,14 @@ const logSaleActivity = async (req, action, sale) => {
 
 exports.getSales = async (req, res) => {
   try {
-    const sales = await Sale.find({ isActive: true })
+    const { ROLE_IDS } = require('../utils/roles');
+    
+    let query = { isActive: true };
+    if (req.user.role === ROLE_IDS.USER) {
+      query.createdBy = req.user.id;
+    }
+
+    const sales = await Sale.find(query)
       .populate('customer', 'name email phone')
       .populate('items.product', 'name sku price')
       .sort({ createdAt: -1 });
@@ -161,6 +168,7 @@ exports.createSale = async (req, res) => {
           paymentStatus,
           notes,
           branch: req.user?.branch || undefined,
+          createdBy: req.user.id,
         },
       ], { session: opts.session });
       createdSale = sale[0];
@@ -177,6 +185,7 @@ exports.createSale = async (req, res) => {
         paymentStatus,
         notes,
         branch: req.user?.branch || undefined,
+        createdBy: req.user.id,
       });
     }
 

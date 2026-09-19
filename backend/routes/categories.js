@@ -8,8 +8,8 @@ router.use(authenticate);
 
 router.get('/', categoryController.getCategories);
 router.get('/:id', categoryController.getCategoryById);
-router.post('/', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]), categoryController.createCategory);
-router.put('/:id', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]), categoryController.updateCategory);
-router.delete('/:id', authorize([ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER]), categoryController.deleteCategory);
+router.post('/', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]), categoryController.createCategory);
+router.put('/:id', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]), categoryController.updateCategory);
+router.delete('/:id', authorize([ROLE_IDS.ADMIN, ROLE_IDS.MANAGER]), categoryController.deleteCategory);
 
 module.exports = router;
