@@ -50,19 +50,21 @@ exports.register = asyncHandler(async (req, res) => {
   const verificationToken = crypto.randomBytes(32).toString('hex');
   user.emailVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
   user.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+  if (process.env.NODE_ENV !== 'production') {
+    user.isEmailVerified = true;
+  }
 
   await user.save();
 
-  try {
-    await sendMail({
-      to: user.email,
-      subject: 'Verify your email',
-      text: `Verify your email with this token: ${verificationToken}`,
-      html: `<p>Verify your email using this token:</p><p><b>${verificationToken}</b></p>`,
-    });
-  } catch (error) {
-    logger.warn(`Failed to send verification email to ${user.email}. SMTP might not be configured.`);
-  }
+  // Send verification email in background without blocking response
+  sendMail({
+    to: user.email,
+    subject: 'Verify your email',
+    text: `Verify your email with this token: ${verificationToken}`,
+    html: `<p>Verify your email using this token:</p><p><b>${verificationToken}</b></p>`,
+  }).catch((error) => {
+    logger.warn(`Failed to send verification email to ${user.email}: ${error.message}`);
+  });
 
   // Generate tokens
   const payload = { id: user._id, email: user.email, role: user.role };

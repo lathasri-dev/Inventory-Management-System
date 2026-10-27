@@ -4,12 +4,12 @@ const logger = require('../utils/logger');
 const checkSmtpConfig = () => {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
 
   const missingVars = [];
-  if (!host) missingVars.push('SMTP_HOST');
-  if (!user) missingVars.push('SMTP_USER');
-  if (!pass) missingVars.push('SMTP_PASS');
+  if (!host || host.includes('your-smtp')) missingVars.push('SMTP_HOST');
+  if (!user || user.includes('your-email') || user.includes('example.com')) missingVars.push('SMTP_USER');
+  if (!pass || pass.includes('your-app-password')) missingVars.push('SMTP_PASSWORD');
 
   return missingVars;
 };
@@ -18,7 +18,7 @@ const createTransporter = () => {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 587);
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
 
   return nodemailer.createTransport({
     host,

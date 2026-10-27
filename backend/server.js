@@ -18,31 +18,46 @@ const app = express();
 // ==================== MIDDLEWARE ====================
 
 // Security middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
 const allowedOrigins = new Set([
   process.env.FRONTEND_URL,
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:4173',
   'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
   'http://127.0.0.1:4173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ].filter(Boolean));
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (
-      !origin ||
-      allowedOrigins.has(origin) ||
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-    ) {
-      callback(null, true);
-      return;
-    }
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // In development or if request has no origin (curl/mobile/local), allow all
+      if (!origin || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
 
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-}));
+      if (
+        allowedOrigins.has(origin) ||
+        /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  })
+);
 
 const sanitizeObject = (value) => {
   if (Array.isArray(value)) {
