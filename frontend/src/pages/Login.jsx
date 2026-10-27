@@ -34,9 +34,9 @@ import {
 } from '../redux/slices/authSlice';
 
 const DEMO_ROLES = [
-  { label: 'Admin', email: 'admin_1789726102211@example.com', password: 'Password123!', color: '#6366f1' },
-  { label: 'Manager', email: 'manager_1789726102211@example.com', password: 'Password123!', color: '#14b8a6' },
-  { label: 'User', email: 'user_1789726102211@example.com', password: 'Password123!', color: '#f59e0b' },
+  { label: 'Admin', email: 'admin@inventory.com', password: 'Password123!', color: '#6366f1' },
+  { label: 'Manager', email: 'manager@inventory.com', password: 'Password123!', color: '#14b8a6' },
+  { label: 'User', email: 'user@inventory.com', password: 'Password123!', color: '#f59e0b' },
 ];
 
 export default function Login() {

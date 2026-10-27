@@ -52,7 +52,7 @@ const checkStockAlerts = async (product) => {
     if (alertType) {
       // Find all Admins and Managers to notify
       const usersToNotify = await User.find({
-        role: { $in: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.INVENTORY_MANAGER] },
+        role: { $in: [ROLE_IDS.ADMIN, ROLE_IDS.MANAGER] },
       });
 
       const notifications = usersToNotify.map(user => ({

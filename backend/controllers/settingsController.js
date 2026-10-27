@@ -1,6 +1,20 @@
 const Settings = require('../models/Settings');
 const mongoose = require('mongoose');
 
+// Ensure all models are registered for backup
+require('../models/User');
+require('../models/Product');
+require('../models/Category');
+require('../models/Supplier');
+require('../models/Customer');
+require('../models/Sale');
+require('../models/Purchase');
+require('../models/Branch');
+require('../models/Invoice');
+require('../models/Notification');
+require('../models/ActivityLog');
+require('../models/InventoryLog');
+
 // @desc    Get system settings
 // @route   GET /api/settings
 // @access  Private

@@ -140,7 +140,8 @@ export default function Settings() {
       toast.info('Generating database backup...');
       const token = localStorage.getItem('accessToken');
       
-      const response = await axios.get('http://localhost:5001/api/settings/backup', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+      const response = await axios.get(`${apiUrl}/settings/backup`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });

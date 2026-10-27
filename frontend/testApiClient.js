@@ -17,7 +17,7 @@ const test = async () => {
 
   try {
     const res = await apiClient.post('/auth/login', {
-      email: 'admin_1789726102211@example.com',
+      email: 'admin@inventory.com',
       password: 'Password123!',
       role: 'admin'
     });

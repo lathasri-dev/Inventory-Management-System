@@ -63,6 +63,11 @@ const sanitizeObject = (value) => {
   return value;
 };
 
+// Body parser middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Sanitization middleware (runs after body parser)
 app.use((req, res, next) => {
   if (req.body) {
     req.body = sanitizeObject(req.body);
@@ -82,10 +87,6 @@ app.use((req, res, next) => {
 // Logging middleware
 app.use(requestLogger);
 app.use(activityLogger);
-
-// Body parser middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Rate limiting
 app.use('/api/auth/login', authLimiter);

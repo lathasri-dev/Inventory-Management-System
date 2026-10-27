@@ -50,7 +50,7 @@ exports.updateUserRole = async (req, res) => {
     }
 
     // Prevent de-promoting oneself to avoid lockout issues
-    if (req.user.id === user.id && role !== ROLE_IDS.ADMIN && role !== ROLE_IDS.SUPER_ADMIN) {
+    if (req.user.id === user.id && role !== ROLE_IDS.ADMIN) {
       return res.status(400).json({ success: false, message: 'You cannot change your own admin role' });
     }
 

@@ -2,6 +2,9 @@ const ROLE_IDS = {
   ADMIN: 'admin',
   MANAGER: 'manager',
   USER: 'user',
+  SUPER_ADMIN: 'admin',
+  INVENTORY_MANAGER: 'manager',
+  VIEWER: 'user',
 };
 
 const LEGACY_ROLE_MAP = {

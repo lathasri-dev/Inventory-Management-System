@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const { ROLE_IDS } = require('../utils/roles');
+const { ROLE_IDS, normalizeRole } = require('../utils/roles');
 const crypto = require('crypto');
 const {
   generateAccessToken,
@@ -18,8 +18,8 @@ exports.register = asyncHandler(async (req, res) => {
   const { fullName, email, password, phone, role, securityQuestion, securityAnswer } = req.body;
 
   // Validate input
-  if (!fullName || !email || !password || !phone || !securityQuestion || !securityAnswer) {
-    throw new APIError('All fields are required, including security question and answer', 400);
+  if (!fullName || !email || !password || !phone) {
+    throw new APIError('Full name, email, password, and phone number are required', 400);
   }
 
   // Check if user already exists
@@ -28,8 +28,9 @@ exports.register = asyncHandler(async (req, res) => {
     throw new APIError('User already registered with this email', 409);
   }
 
-  const normalizedAnswer = securityAnswer.trim().toLowerCase();
-  const securityAnswerHash = await bcrypt.hash(normalizedAnswer, 12);
+  const finalSecurityQuestion = securityQuestion || 'What was the name of your first school?';
+  const finalSecurityAnswer = (securityAnswer || 'school').trim().toLowerCase();
+  const securityAnswerHash = await bcrypt.hash(finalSecurityAnswer, 12);
 
   const recoveryCode = crypto.randomBytes(32).toString('hex');
   const recoveryCodeHash = crypto.createHash('sha256').update(recoveryCode).digest('hex');
@@ -40,8 +41,8 @@ exports.register = asyncHandler(async (req, res) => {
     email: email.toLowerCase(),
     password,
     phone,
-    role: role || ROLE_IDS.VIEWER,
-    securityQuestion,
+    role: role || ROLE_IDS.USER,
+    securityQuestion: finalSecurityQuestion,
     securityAnswerHash,
     recoveryCodeHash,
   });
@@ -107,10 +108,12 @@ exports.login = asyncHandler(async (req, res) => {
     throw new APIError('Invalid email or password', 401);
   }
 
-  // Strict Role Validation
-  const requestedRole = req.body.role || 'user';
-  if (user.role !== requestedRole) {
-    throw new APIError('Invalid role. Please select the role associated with your account.', 403);
+  // Strict Role Validation (if role was selected/sent)
+  if (req.body.role) {
+    const requestedRole = normalizeRole(req.body.role);
+    if (user.role !== requestedRole) {
+      throw new APIError('Invalid role. Please select the role associated with your account.', 403);
+    }
   }
 
   // Check if user is active
