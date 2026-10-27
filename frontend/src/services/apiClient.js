@@ -70,6 +70,13 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (!error.response) {
+      return Promise.reject({
+        message: 'Cannot connect to backend server. Please ensure the backend is running on http://localhost:5001',
+        isNetworkError: true,
+      });
+    }
+
     return Promise.reject(error.response?.data || error);
   }
 );
